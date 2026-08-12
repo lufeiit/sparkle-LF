@@ -16,7 +16,7 @@
     "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
     "ensure:electron": "node scripts/install-electron.ts",
     "prepare": "node scripts/prepare.ts",
-    "updater": "node scripts/updater.ts",
+    "updater": "tsx scripts/updater.ts",
     "checksum": "node scripts/checksum.ts",
     "telegram": "node scripts/telegram.ts",
     "generate:sites": "tsx scripts/generate-sites.ts",

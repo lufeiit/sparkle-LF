@@ -118,11 +118,13 @@ export async function downloadAndInstallUpdate(version: string, tag?: string): P
   const { githubToken } = await getAppConfig()
   const releaseTag = resolveReleaseTag(version, tag)
   const baseUrl = `https://github.com/lufeiit/sparkle-LF/releases/download/${releaseTag}/`
+  // 分网站专属包：产物文件名带网站前缀（如 sparkle-lufei-...）；未分网站时为 sparkle-...
+  const sitePrefix = __SITE_ID__ ? `sparkle-${__SITE_ID__}-` : 'sparkle-'
   const fileMap: Record<string, string> = {
-    'win32-x64': `sparkle-windows-${version}-x64-setup.exe`,
-    'win32-arm64': `sparkle-windows-${version}-arm64-setup.exe`,
-    'darwin-x64': `sparkle-macos-${version}-x64.zip`,
-    'darwin-arm64': `sparkle-macos-${version}-arm64.zip`
+    'win32-x64': `${sitePrefix}windows-${version}-x64-setup.exe`,
+    'win32-arm64': `${sitePrefix}windows-${version}-arm64-setup.exe`,
+    'darwin-x64': `${sitePrefix}macos-${version}-x64.zip`,
+    'darwin-arm64': `${sitePrefix}macos-${version}-arm64.zip`
   }
   let file = fileMap[`${process.platform}-${process.arch}`]
   if (isPortable()) {

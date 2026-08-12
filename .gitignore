@@ -4,6 +4,8 @@ resources/sidecar
 extra
 dist
 out
+latest.yml
+*.tsbuildinfo
 .DS_Store
 *.log*
 .idea

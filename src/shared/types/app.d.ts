@@ -4,6 +4,9 @@ interface AppVersion {
   changelog: string
 }
 
+// 分网站打包：构建时由 electron.vite.config.ts 注入（SITE 环境变量）
+declare const __SITE_ID__: string
+
 type AppUpdateChannel = 'stable' | 'rolling'
 type AppNotificationMode = 'system' | 'toast'
 type AppNotificationVariant = 'default' | 'accent' | 'success' | 'warning' | 'danger'

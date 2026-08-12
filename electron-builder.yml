@@ -41,6 +41,8 @@ mac:
   target:
     - dmg
     - zip
+  # ad-hoc 签名：无 Apple 证书时至少保证 app 结构合法（arm64 可运行）
+  identity: '-'
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.

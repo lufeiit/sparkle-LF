@@ -20,9 +20,12 @@ const monacoEditorPlugin = isObjectWithDefaultFunction(monacoEditorPluginModule)
 // Electron 22 (Win7) and Electron 32 (Catalina) require CJS main/preload output.
 const isLegacyBuild = process.env.LEGACY_BUILD === 'true'
 const legacyExternal = ['electron', 'age-encryption']
+// 分网站打包：编译时注入当前网站 id（无 SITE 时为 ''，表示包含全部网站）
+const siteId = process.env.SITE?.trim() || ''
 
 export default defineConfig({
   main: {
+    define: { __SITE_ID__: JSON.stringify(siteId) },
     plugins: isLegacyBuild ? [] : undefined,
     build: {
       externalizeDeps: isLegacyBuild

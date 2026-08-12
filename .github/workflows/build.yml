@@ -24,6 +24,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        # 分网站专属打包：每个网站一个独立包（产物名带网站前缀）
+        site: [lufei, mitu]
         include:
           - os: windows-latest
             arch: x64
@@ -89,7 +91,7 @@ jobs:
             arch: arm64
             legacy: catalina
 
-    name: Build ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
+    name: Build ${{ matrix.site }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
 
     steps:
       - name: Checkout
@@ -198,6 +200,13 @@ jobs:
             SKIP_PREPARE=1 pnpm run ensure:electron
           fi
 
+          # 分网站专属包：所有 artifactName 加网站前缀（sparkle-{site}-...），
+          # 在 legacy 后缀替换之后执行，避免相互影响
+          SITE_ID="${{ matrix.site }}"
+          if [[ -n "$SITE_ID" ]]; then
+            node -e 'const fs=require("fs");const p="electron-builder.yml";const s=process.argv[1];fs.writeFileSync(p,fs.readFileSync(p,"utf8").split("artifactName: ${name}-").join(`artifactName: ${name}-${s}-`))' "$SITE_ID"
+          fi
+
           verify_native_package() {
             node -e "require('node:module').createRequire(require.resolve(process.argv[1])).resolve(process.argv[2].trim() + '/package.json')" "$1" "$2"
           }
@@ -224,6 +233,7 @@ jobs:
         env:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
+          SITE: ${{ matrix.site }}
           LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
         run: |
@@ -266,7 +276,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
+          name: ${{ matrix.site }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
           path: |
             dist/sparkle*
             !dist/sparkle.app.plist
