@@ -66,19 +66,34 @@ async function main(): Promise<void> {
   }
 
   console.log(`Installing Electron ${version} for ${platform}-${arch}...`)
-  const zipPath = await downloadArtifact({
-    version,
-    artifactName: 'electron',
-    force: process.env.force_no_cache === 'true',
-    cacheRoot: process.env.electron_config_cache,
-    checksums:
-      process.env.electron_use_remote_checksums ||
-      process.env.npm_config_electron_use_remote_checksums
-        ? undefined
-        : electronRequire('./checksums.json'),
-    platform,
-    arch
-  })
+
+  // GitHub Actions runner 下载 Electron 二进制偶发网络抖动（fetch failed），带重试
+  const MAX_ATTEMPTS = 5
+  let zipPath = ''
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      zipPath = await downloadArtifact({
+        version,
+        artifactName: 'electron',
+        force: process.env.force_no_cache === 'true',
+        cacheRoot: process.env.electron_config_cache,
+        checksums:
+          process.env.electron_use_remote_checksums ||
+          process.env.npm_config_electron_use_remote_checksums
+            ? undefined
+            : electronRequire('./checksums.json'),
+        platform,
+        arch
+      })
+      break
+    } catch (error) {
+      console.error(`下载 Electron ${version} 失败（第 ${attempt}/${MAX_ATTEMPTS} 次）：${error instanceof Error ? error.message : String(error)}`)
+      if (attempt === MAX_ATTEMPTS) {
+        throw error
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+    }
+  }
 
   fs.rmSync(distPath, { recursive: true, force: true })
   fs.mkdirSync(distPath, { recursive: true })
