@@ -248,6 +248,8 @@ jobs:
           npm_config_target_arch: ${{ matrix.arch }}
           electron_config_cache: ${{ github.workspace }}/.electron-cache
           ELECTRON_MIRROR: ${{ matrix.arch == 'loong64' && 'https://github.com/darkyzhou/electron-loong64/releases/download/' || 'https://npmmirror.com/mirrors/electron/' }}
+          # electron-builder 打包工具（winCodeSign/nsis 等）也走 GitHub，38 job 并发会 503，改用 npmmirror
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
           SITE: ${{ matrix.site }}
           LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
