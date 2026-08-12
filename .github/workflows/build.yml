@@ -164,6 +164,9 @@ jobs:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
           electron_config_cache: ${{ github.workspace }}/.electron-cache
+          # 38 job 并发从 GitHub 官方下载 Electron 会触发限流（SocketError），
+          # 改用 npmmirror 镜像（无并发限流）；loong64 需用 darkyzhou 专用镜像
+          ELECTRON_MIRROR: ${{ matrix.arch == 'loong64' && 'https://github.com/darkyzhou/electron-loong64/releases/download/' || 'https://npmmirror.com/mirrors/electron/' }}
           LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
         run: |
@@ -242,6 +245,7 @@ jobs:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
           electron_config_cache: ${{ github.workspace }}/.electron-cache
+          ELECTRON_MIRROR: ${{ matrix.arch == 'loong64' && 'https://github.com/darkyzhou/electron-loong64/releases/download/' || 'https://npmmirror.com/mirrors/electron/' }}
           SITE: ${{ matrix.site }}
           LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
