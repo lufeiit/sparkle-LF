@@ -1,7 +1,7 @@
 appId: sparkle.app
 productName: Sparkle
 # ad-hoc 签名（无 Apple 证书时统一签名，解决 arm64 different Team IDs 崩溃）
-afterSign: scripts/afterSign.js
+afterSign: scripts/afterSign.cjs
 directories:
   buildResources: build
 files:

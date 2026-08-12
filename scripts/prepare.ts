@@ -388,7 +388,7 @@ const resolveEnableLoopback = () =>
     file: 'enableLoopback.exe',
     downloadURL: `https://github.com/Kuingsmile/uwp-tool/releases/download/latest/enableLoopback.exe`
   })
-const resolveSparkleService = () => {
+const resolveSparkleService = async () => {
   const map = {
     'win32-x64': 'sparkle-service-windows-amd64-v3',
     'win32-ia32': 'sparkle-service-windows-386',
@@ -404,10 +404,32 @@ const resolveSparkleService = () => {
   }
   const base = map[`${platform}-${arch}`]
   const ext = platform == 'win32' ? '.exe' : ''
+  const file = `sparkle-service${ext}`
+  const downloadURL = `https://github.com/UruhaLushia/sparkle-service/releases/download/pre-release/${base}${ext}`
+
+  // 优先使用仓库内置（extra/kernels/<platform>-<arch>/），避免 CI 从 GitHub 下载（限流）
+  const resDir = path.join(cwd, 'extra', 'files')
+  const targetPath = path.join(resDir, file)
+  const kernelsFile = path.join(cwd, 'extra', 'kernels', `${platform}-${arch}`, file)
+  if (fs.existsSync(kernelsFile)) {
+    fs.mkdirSync(resDir, { recursive: true })
+    fs.copyFileSync(kernelsFile, targetPath)
+    if (platform !== 'win32') execSync(`chmod 755 ${targetPath}`)
+    console.log(`[INFO]: ${file} 使用仓库内置 ${file}`)
+    // 记录版本标记（downloadURL 即版本标识）
+    const versionFile = path.join(resDir, 'versions.json')
+    let versions: Record<string, string> = {}
+    if (fs.existsSync(versionFile)) {
+      try { versions = JSON.parse(fs.readFileSync(versionFile, 'utf-8')) } catch { versions = {} }
+    }
+    versions[file] = downloadURL
+    fs.writeFileSync(versionFile, JSON.stringify(versions, null, 2))
+    return
+  }
 
   return resolveResource({
-    file: `sparkle-service${ext}`,
-    downloadURL: `https://github.com/UruhaLushia/sparkle-service/releases/download/pre-release/${base}${ext}`,
+    file,
+    downloadURL,
     needExecutable: true
   })
 }
