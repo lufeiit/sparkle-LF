@@ -9,6 +9,37 @@ const cwd = process.cwd()
 const TEMP_DIR = path.join(cwd, 'node_modules/.temp')
 let arch: string = process.arch
 const platform = process.platform
+
+// 版本缓存（extra/sidecar/versions.json）：配合 CI 缓存，网络失败时用缓存版本继续
+const SIDECAR_VERSION_FILE = path.join(cwd, 'extra', 'sidecar', 'versions.json')
+function readCachedVersion(key: string): string | undefined {
+  try {
+    if (fs.existsSync(SIDECAR_VERSION_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SIDECAR_VERSION_FILE, 'utf-8'))
+      return data[key]
+    }
+  } catch {
+    // ignore
+  }
+  return undefined
+}
+function writeCachedVersion(key: string, value: string): void {
+  try {
+    fs.mkdirSync(path.dirname(SIDECAR_VERSION_FILE), { recursive: true })
+    let data: Record<string, string> = {}
+    if (fs.existsSync(SIDECAR_VERSION_FILE)) {
+      try {
+        data = JSON.parse(fs.readFileSync(SIDECAR_VERSION_FILE, 'utf-8'))
+      } catch {
+        data = {}
+      }
+    }
+    data[key] = value
+    fs.writeFileSync(SIDECAR_VERSION_FILE, JSON.stringify(data, null, 2))
+  } catch {
+    // ignore
+  }
+}
 if (process.argv.slice(2).length !== 0) {
   arch = process.argv.slice(2)[0].replace('--', '')
 }
@@ -48,9 +79,17 @@ async function getLatestAlphaVersion() {
     const v = await response.text()
     MIHOMO_ALPHA_VERSION = v.trim() // Trim to remove extra whitespaces
     console.log(`Latest alpha version: ${MIHOMO_ALPHA_VERSION}`)
+    writeCachedVersion('_alpha_version', MIHOMO_ALPHA_VERSION)
   } catch (error) {
-    console.error('Error fetching latest alpha version:', getErrorMessage(error))
-    process.exit(1)
+    // 网络失败时使用缓存的版本（配合 CI 缓存），避免整个构建因抖动失败
+    const cached = readCachedVersion('_alpha_version')
+    if (cached) {
+      console.warn(`获取 alpha 版本失败，使用缓存版本: ${cached}`)
+      MIHOMO_ALPHA_VERSION = cached
+    } else {
+      console.error('Error fetching latest alpha version:', getErrorMessage(error))
+      throw error // 抛错让任务重试（process.exit 会绕过重试直接退出）
+    }
   }
 }
 
@@ -80,9 +119,17 @@ async function getLatestReleaseVersion() {
     const v = await response.text()
     MIHOMO_VERSION = v.trim() // Trim to remove extra whitespaces
     console.log(`Latest release version: ${MIHOMO_VERSION}`)
+    writeCachedVersion('_release_version', MIHOMO_VERSION)
   } catch (error) {
-    console.error('Error fetching latest release version:', getErrorMessage(error))
-    process.exit(1)
+    // 网络失败时使用缓存的版本（配合 CI 缓存），避免整个构建因抖动失败
+    const cached = readCachedVersion('_release_version')
+    if (cached) {
+      console.warn(`获取 release 版本失败，使用缓存版本: ${cached}`)
+      MIHOMO_VERSION = cached
+    } else {
+      console.error('Error fetching latest release version:', getErrorMessage(error))
+      throw error // 抛错让任务重试（process.exit 会绕过重试直接退出）
+    }
   }
 }
 
