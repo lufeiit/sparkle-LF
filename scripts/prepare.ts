@@ -10,8 +10,8 @@ const TEMP_DIR = path.join(cwd, 'node_modules/.temp')
 let arch: string = process.arch
 const platform = process.platform
 
-// 版本缓存（extra/sidecar/versions.json）：配合 CI 缓存，网络失败时用缓存版本继续
-const SIDECAR_VERSION_FILE = path.join(cwd, 'extra', 'sidecar', 'versions.json')
+// 版本缓存（extra/kernels/versions.json）：仓库内置内核的版本，CI 优先使用避免 fetch GitHub
+const SIDECAR_VERSION_FILE = path.join(cwd, 'extra', 'kernels', 'versions.json')
 function readCachedVersion(key: string): string | undefined {
   try {
     if (fs.existsSync(SIDECAR_VERSION_FILE)) {
@@ -72,6 +72,13 @@ const MIHOMO_ALPHA_MAP = {
 
 // Fetch the latest alpha release version from the version.txt file
 async function getLatestAlphaVersion() {
+  // 优先使用缓存的版本（配合仓库内置内核 extra/kernels），避免每次从 GitHub 获取
+  const cached = readCachedVersion('_alpha_version')
+  if (cached) {
+    MIHOMO_ALPHA_VERSION = cached
+    console.log(`使用缓存 alpha 版本: ${MIHOMO_ALPHA_VERSION}`)
+    return
+  }
   try {
     const response = await fetch(MIHOMO_ALPHA_VERSION_URL, {
       method: 'GET'
@@ -81,15 +88,8 @@ async function getLatestAlphaVersion() {
     console.log(`Latest alpha version: ${MIHOMO_ALPHA_VERSION}`)
     writeCachedVersion('_alpha_version', MIHOMO_ALPHA_VERSION)
   } catch (error) {
-    // 网络失败时使用缓存的版本（配合 CI 缓存），避免整个构建因抖动失败
-    const cached = readCachedVersion('_alpha_version')
-    if (cached) {
-      console.warn(`获取 alpha 版本失败，使用缓存版本: ${cached}`)
-      MIHOMO_ALPHA_VERSION = cached
-    } else {
-      console.error('Error fetching latest alpha version:', getErrorMessage(error))
-      throw error // 抛错让任务重试（process.exit 会绕过重试直接退出）
-    }
+    console.error('Error fetching latest alpha version:', getErrorMessage(error))
+    throw error // 抛错让任务重试（process.exit 会绕过重试直接退出）
   }
 }
 
@@ -112,6 +112,13 @@ const MIHOMO_MAP = {
 
 // Fetch the latest release version from the version.txt file
 async function getLatestReleaseVersion() {
+  // 优先使用缓存的版本（配合仓库内置内核 extra/kernels），避免每次从 GitHub 获取
+  const cached = readCachedVersion('_release_version')
+  if (cached) {
+    MIHOMO_VERSION = cached
+    console.log(`使用缓存 release 版本: ${MIHOMO_VERSION}`)
+    return
+  }
   try {
     const response = await fetch(MIHOMO_VERSION_URL, {
       method: 'GET'
@@ -121,15 +128,8 @@ async function getLatestReleaseVersion() {
     console.log(`Latest release version: ${MIHOMO_VERSION}`)
     writeCachedVersion('_release_version', MIHOMO_VERSION)
   } catch (error) {
-    // 网络失败时使用缓存的版本（配合 CI 缓存），避免整个构建因抖动失败
-    const cached = readCachedVersion('_release_version')
-    if (cached) {
-      console.warn(`获取 release 版本失败，使用缓存版本: ${cached}`)
-      MIHOMO_VERSION = cached
-    } else {
-      console.error('Error fetching latest release version:', getErrorMessage(error))
-      throw error // 抛错让任务重试（process.exit 会绕过重试直接退出）
-    }
+    console.error('Error fetching latest release version:', getErrorMessage(error))
+    throw error // 抛错让任务重试（process.exit 会绕过重试直接退出）
   }
 }
 
@@ -228,7 +228,13 @@ async function resolveSidecar(binInfo: SidecarInfo) {
 
   fs.mkdirSync(tempDir, { recursive: true })
   try {
-    if (!fs.existsSync(tempZip)) {
+    // 优先使用仓库内置内核（extra/kernels/<platform>-<arch>/），避免 CI 从 GitHub 下载（503 限流）
+    const kernelsDir = path.join(cwd, 'extra', 'kernels', `${platform}-${arch}`)
+    const localZip = path.join(kernelsDir, zipFile)
+    if (fs.existsSync(localZip)) {
+      fs.copyFileSync(localZip, tempZip)
+      console.log(`[INFO]: "${name}" 使用仓库内置内核 ${zipFile}`)
+    } else if (!fs.existsSync(tempZip)) {
       await downloadFile(downloadURL, tempZip)
     }
 
