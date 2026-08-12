@@ -244,6 +244,15 @@ jobs:
             exit 1
           fi
 
+          # loong64：Install 的 pnpm install 会把 electron-builder 恢复为官方版（x64 app-builder
+          # 无法在 loong64 执行），需重新安装 @loongdotjs 版 + electron 39.2.7（darkyzhou loong64）
+          if [[ "${{ matrix.arch }}" == "loong64" ]]; then
+            SKIP_PREPARE=1 pnpm install electron@39.2.7 -D --ignore-scripts
+            pnpm remove electron-builder --config.ignore-scripts=true
+            SKIP_PREPARE=1 pnpm install @loongdotjs/electron-builder@26.8.2-3 -D --ignore-scripts
+            SKIP_PREPARE=1 pnpm run ensure:electron
+          fi
+
       - name: Build
         env:
           npm_config_arch: ${{ matrix.arch }}
