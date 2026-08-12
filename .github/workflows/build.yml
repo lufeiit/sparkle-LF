@@ -78,16 +78,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # 38 个 job 并发从 GitHub 下载 Electron 二进制会触发限流（fetch failed），
-      # 用 actions/cache 缓存下载，命中后直接解压无需网络
-      - name: Cache Electron downloads
+      # 38 个 job 并发从 GitHub 下载 Electron/内核会触发限流（fetch failed / 503），
+      # 用 actions/cache 缓存（electron 下载 + extra 内核目录），命中后无需网络
+      - name: Cache Electron downloads and kernels
         uses: actions/cache@v4
         with:
-          path: .electron-cache
-          key: electron-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.legacy || 'std' }}-${{ hashFiles('pnpm-lock.yaml') }}
+          path: |
+            .electron-cache
+            extra
+          key: prep-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.legacy || 'std' }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            electron-${{ matrix.os }}-${{ matrix.arch }}-
-            electron-${{ matrix.os }}-
+            prep-${{ matrix.os }}-${{ matrix.arch }}-
+            prep-${{ matrix.os }}-
 
       - name: Setup Node
         uses: actions/setup-node@v6

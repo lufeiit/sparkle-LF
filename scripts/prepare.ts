@@ -157,6 +157,21 @@ async function resolveSidecar(binInfo: SidecarInfo) {
   const sidecarPath = path.join(sidecarDir, targetFile)
 
   fs.mkdirSync(sidecarDir, { recursive: true })
+
+  // 版本标记（downloadURL 即版本标识）：已存在且版本一致则跳过，避免重复下载/触发限流
+  const versionFile = path.join(sidecarDir, 'versions.json')
+  let versions: Record<string, string> = {}
+  if (fs.existsSync(versionFile)) {
+    try {
+      versions = JSON.parse(fs.readFileSync(versionFile, 'utf-8'))
+    } catch {
+      versions = {}
+    }
+  }
+  if (fs.existsSync(sidecarPath) && versions[name] === downloadURL) {
+    console.log(`[INFO]: "${name}" 已存在且版本一致，跳过下载`)
+    return
+  }
   if (fs.existsSync(sidecarPath)) {
     fs.rmSync(sidecarPath)
   }
@@ -218,6 +233,9 @@ async function resolveSidecar(binInfo: SidecarInfo) {
           .on('error', onError)
       })
     }
+    // 记录版本标记
+    versions[name] = downloadURL
+    fs.writeFileSync(versionFile, JSON.stringify(versions, null, 2))
   } catch (err) {
     // 需要删除文件
     fs.rmSync(sidecarPath)
@@ -236,6 +254,20 @@ async function resolveResource(binInfo: ResourceInfo) {
   const resDir = path.join(cwd, 'extra', 'files')
   const targetPath = path.join(resDir, file)
 
+  // 版本标记（downloadURL 即版本标识）：已存在且版本一致则跳过，避免重复下载/触发限流
+  const versionFile = path.join(resDir, 'versions.json')
+  let versions: Record<string, string> = {}
+  if (fs.existsSync(versionFile)) {
+    try {
+      versions = JSON.parse(fs.readFileSync(versionFile, 'utf-8'))
+    } catch {
+      versions = {}
+    }
+  }
+  if (fs.existsSync(targetPath) && versions[file] === downloadURL) {
+    console.log(`[INFO]: ${file} 已存在且版本一致，跳过下载`)
+    return
+  }
   if (fs.existsSync(targetPath)) {
     fs.rmSync(targetPath)
   }
@@ -248,6 +280,9 @@ async function resolveResource(binInfo: ResourceInfo) {
     console.log(`[INFO]: ${file} chmod finished`)
   }
 
+  // 记录版本标记
+  versions[file] = downloadURL
+  fs.writeFileSync(versionFile, JSON.stringify(versions, null, 2))
   console.log(`[INFO]: ${file} finished`)
 }
 
