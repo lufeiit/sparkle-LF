@@ -1,5 +1,7 @@
 appId: sparkle.app
 productName: Sparkle
+# ad-hoc 签名（无 Apple 证书时统一签名，解决 arm64 different Team IDs 崩溃）
+afterSign: scripts/afterSign.js
 directories:
   buildResources: build
 files:
@@ -40,8 +42,6 @@ nsis:
 mac:
   target:
     - dmg
-  # ad-hoc 签名（无 Apple 证书时统一签名，解决 arm64 different Team IDs 崩溃）
-  afterSign: scripts/afterSign.js
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
