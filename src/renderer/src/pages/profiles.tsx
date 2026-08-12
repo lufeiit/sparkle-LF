@@ -315,7 +315,6 @@ const Profiles: React.FC = () => {
         <div className="flex items-center justify-center gap-2 p-2">
           <Button
             size="sm"
-            variant="flat"
             color="primary"
             onPress={() => setShowV2BoardModal(true)}
           >

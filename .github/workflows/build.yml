@@ -25,71 +25,50 @@ jobs:
     strategy:
       matrix:
         # 分网站专属打包：每个网站一个独立包（产物名带网站前缀）
-        site: [lufei, mitu]
+        # 注意：必须把 site 显式写进每个 include 条目！
+        # GitHub Actions 的 include 是"合并"语义（同键后覆盖前），
+        # 若用 site 数组 + include 组合，include 条目会互相覆盖只剩最后一个。
         include:
-          - os: windows-latest
-            arch: x64
-            format: 7z
-          - os: windows-latest
-            arch: x64
-            format: nsis
-          - os: windows-latest
-            arch: arm64
-            format: 7z
-          - os: windows-latest
-            arch: arm64
-            format: nsis
-
-          # Win7 兼容构建（Electron 22，legacy CJS）
-          - os: windows-latest
-            arch: x64
-            format: nsis
-            legacy: win7
-          - os: windows-latest
-            arch: x64
-            format: 7z
-            legacy: win7
-
-          - os: ubuntu-latest
-            arch: x64
-            format: deb
-          - os: ubuntu-latest
-            arch: x64
-            format: rpm
-          - os: ubuntu-latest
-            arch: x64
-            format: pacman
-          - os: ubuntu-latest
-            arch: arm64
-            format: deb
-          - os: ubuntu-latest
-            arch: arm64
-            format: rpm
-          - os: ubuntu-latest
-            arch: arm64
-            format: pacman
-          - os: ubuntu-latest
-            arch: loong64
-            format: deb
-          - os: ubuntu-latest
-            arch: loong64
-            format: rpm
-          - os: ubuntu-latest
-            arch: loong64
-            format: pacman
-
-          - os: macos-latest
-            arch: x64
-          - os: macos-latest
-            arch: arm64
-
-          # macOS 10.15 (Catalina) 兼容构建（Electron 32）
-          - os: macos-latest
-            arch: x64
-            legacy: catalina
-          - os: macos-latest
-            arch: arm64
-            legacy: catalina
+          # ===== lufei =====
+          - { site: lufei, os: windows-latest, arch: x64, format: 7z }
+          - { site: lufei, os: windows-latest, arch: x64, format: nsis }
+          - { site: lufei, os: windows-latest, arch: arm64, format: 7z }
+          - { site: lufei, os: windows-latest, arch: arm64, format: nsis }
+          - { site: lufei, os: windows-latest, arch: x64, format: nsis, legacy: win7 }
+          - { site: lufei, os: windows-latest, arch: x64, format: 7z, legacy: win7 }
+          - { site: lufei, os: ubuntu-latest, arch: x64, format: deb }
+          - { site: lufei, os: ubuntu-latest, arch: x64, format: rpm }
+          - { site: lufei, os: ubuntu-latest, arch: x64, format: pacman }
+          - { site: lufei, os: ubuntu-latest, arch: arm64, format: deb }
+          - { site: lufei, os: ubuntu-latest, arch: arm64, format: rpm }
+          - { site: lufei, os: ubuntu-latest, arch: arm64, format: pacman }
+          - { site: lufei, os: ubuntu-latest, arch: loong64, format: deb }
+          - { site: lufei, os: ubuntu-latest, arch: loong64, format: rpm }
+          - { site: lufei, os: ubuntu-latest, arch: loong64, format: pacman }
+          - { site: lufei, os: macos-latest, arch: x64 }
+          - { site: lufei, os: macos-latest, arch: arm64 }
+          - { site: lufei, os: macos-latest, arch: x64, legacy: catalina }
+          - { site: lufei, os: macos-latest, arch: arm64, legacy: catalina }
+          # ===== mitu =====
+          - { site: mitu, os: windows-latest, arch: x64, format: 7z }
+          - { site: mitu, os: windows-latest, arch: x64, format: nsis }
+          - { site: mitu, os: windows-latest, arch: arm64, format: 7z }
+          - { site: mitu, os: windows-latest, arch: arm64, format: nsis }
+          - { site: mitu, os: windows-latest, arch: x64, format: nsis, legacy: win7 }
+          - { site: mitu, os: windows-latest, arch: x64, format: 7z, legacy: win7 }
+          - { site: mitu, os: ubuntu-latest, arch: x64, format: deb }
+          - { site: mitu, os: ubuntu-latest, arch: x64, format: rpm }
+          - { site: mitu, os: ubuntu-latest, arch: x64, format: pacman }
+          - { site: mitu, os: ubuntu-latest, arch: arm64, format: deb }
+          - { site: mitu, os: ubuntu-latest, arch: arm64, format: rpm }
+          - { site: mitu, os: ubuntu-latest, arch: arm64, format: pacman }
+          - { site: mitu, os: ubuntu-latest, arch: loong64, format: deb }
+          - { site: mitu, os: ubuntu-latest, arch: loong64, format: rpm }
+          - { site: mitu, os: ubuntu-latest, arch: loong64, format: pacman }
+          - { site: mitu, os: macos-latest, arch: x64 }
+          - { site: mitu, os: macos-latest, arch: arm64 }
+          - { site: mitu, os: macos-latest, arch: x64, legacy: catalina }
+          - { site: mitu, os: macos-latest, arch: arm64, legacy: catalina }
 
     name: Build ${{ matrix.site }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
 
