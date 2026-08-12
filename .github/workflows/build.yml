@@ -23,6 +23,8 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      # 限制并发，避免 38 job 同时下载 Electron/内核触发 GitHub 限流
+      max-parallel: 8
       matrix:
         # 分网站专属打包：每个网站一个独立包（产物名带网站前缀）
         # 注意：必须把 site 显式写进每个 include 条目！
@@ -75,6 +77,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # 38 个 job 并发从 GitHub 下载 Electron 二进制会触发限流（fetch failed），
+      # 用 actions/cache 缓存下载，命中后直接解压无需网络
+      - name: Cache Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: .electron-cache
+          key: electron-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.legacy || 'std' }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            electron-${{ matrix.os }}-${{ matrix.arch }}-
+            electron-${{ matrix.os }}-
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -150,6 +163,7 @@ jobs:
         env:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
+          electron_config_cache: ${{ github.workspace }}/.electron-cache
           LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
         run: |
@@ -227,6 +241,7 @@ jobs:
         env:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
+          electron_config_cache: ${{ github.workspace }}/.electron-cache
           SITE: ${{ matrix.site }}
           LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
