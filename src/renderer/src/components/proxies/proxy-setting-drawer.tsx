@@ -26,7 +26,7 @@ const ProxySettingDrawer: React.FC<Props> = (props) => {
     proxyCols = 'auto',
     proxyDisplayOrder = 'default',
     groupDisplayLayout = 'single',
-    proxyDisplayLayout = 'double',
+    proxyDisplayLayout = 'hidden',
     showGroupSelectedProxy = false,
     showProxyDetailTooltip = false,
     autoCloseConnection = true,

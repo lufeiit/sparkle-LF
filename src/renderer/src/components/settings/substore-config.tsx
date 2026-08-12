@@ -16,7 +16,7 @@ import { notify } from '@renderer/utils/notification'
 const SubStoreConfig: React.FC = () => {
   const { appConfig, patchAppConfig } = useAppConfig()
   const {
-    useSubStore = true,
+    useSubStore = false,
     useCustomSubStore = false,
     useProxyInSubStore = false,
     subStoreHost = '127.0.0.1',

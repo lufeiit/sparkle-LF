@@ -187,7 +187,7 @@ const Proxies: React.FC = () => {
   const { groups = [], mutate } = useGroups()
   const { appConfig } = useAppConfig()
   const {
-    proxyDisplayLayout = 'double',
+    proxyDisplayLayout = 'hidden',
     groupDisplayLayout = 'double',
     showGroupSelectedProxy = false,
     showProxyDetailTooltip = false,

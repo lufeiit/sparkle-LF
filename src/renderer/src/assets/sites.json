@@ -1,0 +1,60 @@
+[
+  {
+    "id": "lufei",
+    "name": {
+      "zh": "路飞云",
+      "en": "LufeiCloud"
+    },
+    "apiSites": [
+      "http://103.236.77.114:53651/lufei",
+      "http://47.103.130.251:33651/lufei",
+      "http://112.8.207.240:33651/lufei",
+      "http://103.97.176.99:18182/lufei",
+      "http://154.12.18.186:18182/lufei",
+      "http://103.116.246.169:18182/lufei"
+    ],
+    "infoUrl": {
+      "cn": "https://www.yuque.com/jefflewis/dxmwfu/zttgx31gg811howp",
+      "cnPassword": "brad",
+      "en": "https://sway.cloud.microsoft/MG3JKNnxAVuuQAnZ?ref=Link",
+      "label": "路飞云网站和群组信息：",
+      "cnLabel": "国内查看",
+      "enLabel": "国外查看",
+      "passwordLabel": "密码"
+    },
+    "chatwoot": {
+      "host": "https://chatwoot.sub-you.top",
+      "websiteToken": "AyHjX336YHpPyezFnKk5m5ch",
+      "label": "在线客服"
+    }
+  },
+  {
+    "id": "mitu",
+    "name": {
+      "zh": "迷途云",
+      "en": "StrayCloud"
+    },
+    "apiSites": [
+      "http://47.103.130.251:28612/mitu",
+      "http://103.236.77.114:58612/mitu",
+      "http://112.8.207.240:28612/mitu",
+      "http://103.97.176.99:18181/mitu",
+      "http://154.12.18.186:18181/mitu",
+      "http://103.116.246.169:18181/mitu"
+    ],
+    "infoUrl": {
+      "cn": "https://www.yuque.com/jefflewis/dxmwfu/lxvz3lmpwiotb6tm",
+      "cnPassword": "ui5y",
+      "en": "https://sway.cloud.microsoft/0Nm8DAdaImTzhtgK?ref=Link",
+      "label": "迷途云网站和群组信息：",
+      "cnLabel": "国内查看",
+      "enLabel": "国外查看",
+      "passwordLabel": "密码"
+    },
+    "chatwoot": {
+      "host": "https://chatwoot.sub-you.top",
+      "websiteToken": "iwEeuaDaxAkL4sLqW4boTybF",
+      "label": "在线客服"
+    }
+  }
+]

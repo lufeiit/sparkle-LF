@@ -114,7 +114,7 @@ export async function stopPacServer(): Promise<void> {
 }
 
 export async function startSubStoreFrontendServer(): Promise<void> {
-  const { useSubStore = true, subStoreHost = '127.0.0.1' } = await getAppConfig()
+  const { useSubStore = false, subStoreHost = '127.0.0.1' } = await getAppConfig()
   if (!useSubStore) return
   await stopSubStoreFrontendServer()
   subStoreFrontendPort = await findAvailablePort(14122)
@@ -135,7 +135,7 @@ export async function stopSubStoreFrontendServer(): Promise<void> {
 
 export async function startSubStoreBackendServer(): Promise<void> {
   const {
-    useSubStore = true,
+    useSubStore = false,
     useCustomSubStore = false,
     useProxyInSubStore = false,
     subStoreHost = '127.0.0.1',

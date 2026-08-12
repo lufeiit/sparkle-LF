@@ -17,6 +17,7 @@ import dayjs from 'dayjs'
 import React, { Key, useEffect, useMemo, useState } from 'react'
 import EditFileModal from './edit-file-modal'
 import EditInfoModal from './edit-info-modal'
+import V2BoardImportModal from './v2board-import-modal'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { openFile } from '@renderer/utils/ipc'
@@ -59,6 +60,14 @@ const ProfileItem: React.FC<Props> = (props) => {
   const total = extra?.total ?? 0
   const { appConfig, patchAppConfig } = useAppConfig()
   const { profileDisplayDate = 'expire' } = appConfig || {}
+  const isRemote = info.type === 'remote' || info.type === 'v2board'
+  const isV2Board = info.type === 'v2board'
+  const v2boardLoggedIn = Boolean(isV2Board && info.v2board?.email && info.v2board?.password)
+  const v2boardDisplayName = isV2Board
+    ? v2boardLoggedIn
+      ? info.v2board?.email || '未登录'
+      : '未登录'
+    : info?.name
   const [updating, setUpdating] = useState(false)
   const [selecting, setSelecting] = useState(false)
   const [openInfoEditor, setOpenInfoEditor] = useState(false)
@@ -76,7 +85,9 @@ const ProfileItem: React.FC<Props> = (props) => {
   const transform = tf ? { x: tf.x, y: tf.y, scaleX: 1, scaleY: 1 } : null
   const [disableSelect, setDisableSelect] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   const [showQrCode, setShowQrCode] = useState(false)
+  const [showV2BoardLogin, setShowV2BoardLogin] = useState(false)
 
   const menuItems: MenuItem[] = useMemo(() => {
     const list = [
@@ -97,11 +108,11 @@ const ProfileItem: React.FC<Props> = (props) => {
       {
         key: 'open-file',
         label: '打开文件',
-        showDivider: !(info.type === 'remote' && info.url),
+        showDivider: !(isRemote && info.url),
         color: 'default',
         className: ''
       } as MenuItem,
-      ...(info.type === 'remote' && info.url
+      ...(isRemote && info.url
         ? [
             {
               key: 'qrcode',
@@ -110,6 +121,25 @@ const ProfileItem: React.FC<Props> = (props) => {
               color: 'default',
               className: ''
             } as MenuItem
+          ]
+        : []),
+      ...(isV2Board
+        ? [
+            v2boardLoggedIn
+              ? ({
+                  key: 'v2board-logout',
+                  label: '登出账户',
+                  showDivider: true,
+                  color: 'danger',
+                  className: 'text-danger'
+                } as MenuItem)
+              : ({
+                  key: 'v2board-login',
+                  label: '登录账户',
+                  showDivider: true,
+                  color: 'default',
+                  className: ''
+                } as MenuItem)
           ]
         : []),
       {
@@ -154,6 +184,14 @@ const ProfileItem: React.FC<Props> = (props) => {
         setConfirmOpen(true)
         break
       }
+      case 'v2board-login': {
+        setShowV2BoardLogin(true)
+        break
+      }
+      case 'v2board-logout': {
+        setConfirmLogoutOpen(true)
+        break
+      }
 
       case 'home': {
         open(info.home)
@@ -189,7 +227,7 @@ const ProfileItem: React.FC<Props> = (props) => {
       {openFileEditor && (
         <EditFileModal
           id={info.id}
-          isRemote={info.type === 'remote'}
+          isRemote={isRemote}
           onClose={() => setOpenFileEditor(false)}
         />
       )}
@@ -216,6 +254,27 @@ const ProfileItem: React.FC<Props> = (props) => {
           }}
         />
       )}
+      {confirmLogoutOpen && (
+        <ConfirmModal
+          onChange={setConfirmLogoutOpen}
+          title="确认登出账户？"
+          confirmText="确认登出"
+          cancelText="取消"
+          onConfirm={async () => {
+            // 登出 = 删除该 v2board 订阅项
+            await removeProfileItem(info.id)
+            mutateProfileConfig()
+          }}
+        />
+      )}
+      {showV2BoardLogin && (
+        <V2BoardImportModal
+          item={info}
+          addProfileItem={addProfileItem}
+          updateProfileItem={updateProfileItem}
+          onClose={() => setShowV2BoardLogin(false)}
+        />
+      )}
       <Card
         as="div"
         fullWidth
@@ -234,14 +293,14 @@ const ProfileItem: React.FC<Props> = (props) => {
             <div className="flex justify-between h-8 gap-1">
               <div className="flex min-w-0 items-center">
                 <h3
-                  title={info?.name}
+                  title={v2boardDisplayName}
                   className={`text-ellipsis whitespace-nowrap overflow-hidden text-md font-bold leading-8 ${isCurrent ? 'text-primary-foreground' : 'text-foreground'}`}
                 >
-                  {info?.name}
+                  {v2boardDisplayName}
                 </h3>
               </div>
               <div className="flex shrink-0" data-no-dnd onClick={(e) => e.stopPropagation()}>
-                {info.type === 'remote' && (
+                {isRemote && (
                   <Tooltip placement="left" content={dayjs(info.updated).fromNow()}>
                     <Button
                       isIconOnly
@@ -250,6 +309,10 @@ const ProfileItem: React.FC<Props> = (props) => {
                       color="default"
                       disabled={updating}
                       onPress={async () => {
+                        if (isV2Board && !v2boardLoggedIn) {
+                          setShowV2BoardLogin(true)
+                          return
+                        }
                         setUpdating(true)
                         await addProfileItem(info)
                         setUpdating(false)
@@ -287,7 +350,7 @@ const ProfileItem: React.FC<Props> = (props) => {
                 </Dropdown>
               </div>
             </div>
-            {info.type === 'remote' && extra && (
+            {isRemote && extra && (
               <div
                 className={`mt-2 flex justify-between ${isCurrent ? 'text-primary-foreground' : 'text-foreground'}`}
               >
@@ -319,7 +382,7 @@ const ProfileItem: React.FC<Props> = (props) => {
             )}
           </CardBody>
           <CardFooter className="pt-0">
-            {info.type === 'remote' && !extra && (
+            {isRemote && !extra && (
               <div
                 className={`w-full mt-2 flex justify-between ${isCurrent ? 'text-primary-foreground' : 'text-foreground'}`}
               >
@@ -328,8 +391,13 @@ const ProfileItem: React.FC<Props> = (props) => {
                   variant="bordered"
                   className={`${isCurrent ? 'text-primary-foreground border-primary-foreground' : 'border-primary text-primary'}`}
                 >
-                  远程
+                  {info.type === 'v2board' ? 'v2board' : '远程'}
                 </Chip>
+                {info.type === 'v2board' && (
+                  <small className="truncate pl-2">
+                    {v2boardLoggedIn ? info.v2board?.email : '未登录'}
+                  </small>
+                )}
                 <small>{dayjs(info.updated).fromNow()}</small>
               </div>
             )}

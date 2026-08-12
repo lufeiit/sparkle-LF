@@ -16,17 +16,36 @@ const monacoEditorPlugin = isObjectWithDefaultFunction(monacoEditorPluginModule)
   ? monacoEditorPluginModule.default
   : monacoEditorPluginModule
 
+// Legacy build (Win7 / macOS 10.15): bundle all deps to CJS, only externalize native modules
+// Electron 22 (Win7) and Electron 32 (Catalina) require CJS main/preload output.
+const isLegacyBuild = process.env.LEGACY_BUILD === 'true'
+const legacyExternal = ['electron', 'age-encryption']
+
 export default defineConfig({
   main: {
+    plugins: isLegacyBuild ? [] : undefined,
     build: {
-      externalizeDeps: {
-        exclude: ['age-encryption']
-      }
+      externalizeDeps: isLegacyBuild
+        ? { exclude: ['age-encryption'] }
+        : { exclude: ['age-encryption'] },
+      rollupOptions: isLegacyBuild
+        ? { external: legacyExternal, output: { format: 'cjs' } }
+        : undefined
     }
   },
   preload: {
+    plugins: isLegacyBuild ? [] : undefined,
     build: {
-      externalizeDeps: true
+      externalizeDeps: true,
+      rollupOptions: isLegacyBuild
+        ? {
+            external: legacyExternal,
+            output: {
+              format: 'cjs',
+              entryFileNames: '[name].cjs'
+            }
+          }
+        : undefined
     }
   },
   renderer: {

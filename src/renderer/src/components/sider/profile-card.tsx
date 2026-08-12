@@ -57,6 +57,14 @@ const ProfileCard: React.FC<Props> = (props) => {
   const extra = info?.extra
   const usage = (extra?.upload ?? 0) + (extra?.download ?? 0)
   const total = extra?.total ?? 0
+  const isRemote = info.type === 'remote' || info.type === 'v2board'
+  const isV2Board = info.type === 'v2board'
+  const v2boardLoggedIn = Boolean(isV2Board && info.v2board?.email && info.v2board?.password)
+  const v2boardDisplayName = isV2Board
+    ? v2boardLoggedIn
+      ? info.v2board?.email || '未登录'
+      : '未登录'
+    : info?.name
 
   if (iconOnly) {
     return (
@@ -105,10 +113,10 @@ const ProfileCard: React.FC<Props> = (props) => {
               className="flex justify-between h-8"
             >
               <h3
-                title={info?.name}
+                title={v2boardDisplayName}
                 className={`text-ellipsis whitespace-nowrap overflow-hidden text-md font-bold leading-8 ${match ? 'text-primary-foreground' : 'text-foreground'} `}
               >
-                {info?.name}
+                {v2boardDisplayName}
               </h3>
               <div className="flex">
                 <Button
@@ -124,7 +132,7 @@ const ProfileCard: React.FC<Props> = (props) => {
                     className={`text-[24px] ${match ? 'text-primary-foreground' : 'text-foreground'}`}
                   />
                 </Button>
-                {info.type === 'remote' && (
+                {isRemote && (
                   <Tooltip delay={1000} placement="left" content={dayjs(info.updated).fromNow()}>
                     <Button
                       isIconOnly
@@ -146,7 +154,7 @@ const ProfileCard: React.FC<Props> = (props) => {
                 )}
               </div>
             </div>
-            {info.type === 'remote' && extra && (
+            {isRemote && extra && (
               <div
                 className={`mt-2 flex justify-between ${match ? 'text-primary-foreground' : 'text-foreground'} `}
               >
@@ -178,7 +186,7 @@ const ProfileCard: React.FC<Props> = (props) => {
             )}
           </CardBody>
           <CardFooter className="pt-0">
-            {info.type === 'remote' && !extra && (
+            {isRemote && !extra && (
               <div
                 className={`w-full mt-2 flex justify-between ${match ? 'text-primary-foreground' : 'text-foreground'}`}
               >
@@ -187,7 +195,7 @@ const ProfileCard: React.FC<Props> = (props) => {
                   variant="bordered"
                   className={`${match ? 'text-primary-foreground border-primary-foreground' : 'border-primary text-primary'}`}
                 >
-                  远程
+                  {info.type === 'v2board' ? 'v2board' : '远程'}
                 </Chip>
                 <small>{dayjs(info.updated).fromNow()}</small>
               </div>

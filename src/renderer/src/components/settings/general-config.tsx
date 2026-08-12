@@ -14,7 +14,6 @@ const GeneralConfig: React.FC = () => {
   const { appConfig, patchAppConfig } = useAppConfig()
   const {
     silentStart = false,
-    autoCheckUpdate,
     updateChannel = 'stable',
     notificationMode = 'system',
     disableGPU = false,
@@ -77,15 +76,6 @@ const GeneralConfig: React.FC = () => {
             isSelected={silentStart}
             onValueChange={(v) => {
               patchAppConfig({ silentStart: v })
-            }}
-          />
-        </SettingItem>
-        <SettingItem compatKey="legacy" title="自动检查更新" divider>
-          <Switch
-            size="sm"
-            isSelected={autoCheckUpdate}
-            onValueChange={(v) => {
-              patchAppConfig({ autoCheckUpdate: v })
             }}
           />
         </SettingItem>

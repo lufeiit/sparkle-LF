@@ -266,6 +266,61 @@ const EditInfoModal: React.FC<Props> = (props) => {
                     }}
                   />
                 )}
+                {values.type === 'v2board' &&
+                  renderField(
+                    '邮箱',
+                    <Input
+                      aria-label="邮箱"
+                      data-setting-input="edit-modal"
+                      value={values.v2board?.email ?? ''}
+                      variant="secondary"
+                      onChange={(event) => {
+                        const v = event.target.value
+                        setValues({
+                          ...values,
+                          v2board: {
+                            ...values.v2board,
+                            email: v.trim() || undefined
+                          }
+                        })
+                      }}
+                    />
+                  )}
+                {values.type === 'v2board' &&
+                  renderField(
+                    '密码',
+                    <InputGroup data-setting-input="edit-modal" variant="secondary">
+                      <InputGroup.Input
+                        aria-label="密码"
+                        type={ageIdentityVisible ? 'text' : 'password'}
+                        value={values.v2board?.password ?? ''}
+                        onChange={(event) => {
+                          setValues({
+                            ...values,
+                            v2board: {
+                              ...values.v2board,
+                              password: event.target.value
+                            }
+                          })
+                        }}
+                      />
+                      <InputGroup.Suffix>
+                        <Button
+                          aria-label={ageIdentityVisible ? '隐藏密码' : '显示密码'}
+                          isIconOnly
+                          size="sm"
+                          variant="ghost"
+                          onPress={() => setAgeIdentityVisible((visible) => !visible)}
+                        >
+                          {ageIdentityVisible ? (
+                            <BiHide className="text-lg" />
+                          ) : (
+                            <BiShow className="text-lg" />
+                          )}
+                        </Button>
+                      </InputGroup.Suffix>
+                    </InputGroup>
+                  )}
                 {values.type === 'remote' &&
                   renderField(
                     '订阅地址',
@@ -326,7 +381,7 @@ const EditInfoModal: React.FC<Props> = (props) => {
                       </Switch.Content>
                     </Switch>
                   )}
-                {values.type === 'remote' &&
+                {(values.type === 'remote' || values.type === 'v2board') &&
                   renderField(
                     '使用代理更新',
                     <Switch
@@ -344,7 +399,7 @@ const EditInfoModal: React.FC<Props> = (props) => {
                       </Switch.Content>
                     </Switch>
                   )}
-                {values.type === 'remote' &&
+                {(values.type === 'remote' || values.type === 'v2board') &&
                   renderField(
                     '自动更新',
                     <Switch
@@ -449,7 +504,7 @@ const EditInfoModal: React.FC<Props> = (props) => {
                     </InputGroup.Suffix>
                   </InputGroup>
                 )}
-                {values.type === 'remote' &&
+                {(values.type === 'remote' || values.type === 'v2board') &&
                   values.autoUpdate &&
                   renderField(
                     '更新间隔（分钟）',

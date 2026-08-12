@@ -15,7 +15,7 @@ const SubStoreCard: React.FC<Props> = (props) => {
   const { iconOnly } = props
   const {
     substoreCardStatus = 'col-span-1',
-    useSubStore = true,
+    useSubStore = false,
     disableAnimation = false
   } = appConfig || {}
   const location = useLocation()

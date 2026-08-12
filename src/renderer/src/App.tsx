@@ -19,15 +19,14 @@ import ConnCard from '@renderer/components/sider/conn-card'
 import LogCard from '@renderer/components/sider/log-card'
 import MihomoCoreCard from '@renderer/components/sider/mihomo-core-card'
 import ResourceCard from '@renderer/components/sider/resource-card'
-import UpdaterButton from '@renderer/components/updater/updater-button'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
-import { applyTheme, checkUpdate, setNativeTheme, setTitleBarOverlay } from '@renderer/utils/ipc'
+import { applyTheme, setNativeTheme, setTitleBarOverlay } from '@renderer/utils/ipc'
 import { platform } from '@renderer/utils/init'
 import { TitleBarOverlayOptions } from 'electron'
 import SubStoreCard from '@renderer/components/sider/substore-card'
 import MihomoIcon from './components/base/mihomo-icon'
-import useSWR from 'swr'
 import ConfirmModal from '@renderer/components/base/base-confirm'
+import ChatwootButton from '@renderer/components/chatwoot-button'
 import { useCardDndSensors } from '@renderer/hooks/use-card-dnd-sensors'
 
 let navigate: NavigateFunction
@@ -77,9 +76,6 @@ const App: React.FC = () => {
     useWindowFrame = false,
     siderWidth = 250,
     siderOrder,
-    autoCheckUpdate,
-    updateChannel = 'stable',
-    showUpdateButtonAfterNotification = true,
     disableAnimation = false
   } = appConfig || {}
   const siderOrderArray = siderOrder ?? defaultSiderOrder
@@ -113,13 +109,6 @@ const App: React.FC = () => {
       }
     }
   }
-  const { data: latest } = useSWR(
-    autoCheckUpdate ? ['checkUpdate', updateChannel] : undefined,
-    autoCheckUpdate ? checkUpdate : (): undefined => {},
-    {
-      refreshInterval: 1000 * 60 * 10
-    }
-  )
 
   useEffect(() => {
     setOrder(siderOrderArray)
@@ -427,13 +416,6 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="px-2 pt-2 pb-4 flex shrink-0 flex-col items-center space-y-2">
-            {latest && latest.version && (
-              <UpdaterButton
-                iconOnly={true}
-                latest={latest}
-                showButtonAfterNotification={showUpdateButtonAfterNotification}
-              />
-            )}
             <OutboundModeSwitcher iconOnly />
             <Button
               size="sm"
@@ -461,12 +443,6 @@ const App: React.FC = () => {
               <div className="flex ml-1">
                 <h3 className="text-lg font-bold leading-8">Sparkle</h3>
               </div>
-              {latest && latest.version && (
-                <UpdaterButton
-                  latest={latest}
-                  showButtonAfterNotification={showUpdateButtonAfterNotification}
-                />
-              )}
               <Button
                 size="sm"
                 className="app-nodrag"
@@ -536,6 +512,7 @@ const App: React.FC = () => {
         className="main grow h-full overflow-y-auto"
       >
         {page}
+        <ChatwootButton />
       </div>
     </div>
   )

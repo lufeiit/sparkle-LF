@@ -159,7 +159,7 @@ interface ProfileConfig {
 
 interface ProfileItem {
   id: string
-  type: 'remote' | 'local'
+  type: 'remote' | 'local' | 'v2board'
   name: string
   url?: string // remote
   fingerprint?: string // remote
@@ -177,6 +177,18 @@ interface ProfileItem {
   substore?: boolean
   locked?: boolean
   autoUpdate?: boolean
+  v2board?: V2BoardAccount
+}
+
+interface V2BoardAccount {
+  site?: string
+  sites?: string[]
+  email?: string
+  password?: string
+  name?: {
+    zh?: string
+    en?: string
+  }
 }
 
 interface SubscriptionUserInfo {
@@ -207,4 +219,46 @@ interface SubStoreSub {
   displayName?: string
   icon?: string
   tag?: string[]
+}
+
+interface SiteGroup {
+  name: string
+  url: string
+}
+
+interface SiteConfig {
+  id: string
+  name: { zh: string; en: string }
+  apiSites: string[]
+  website?: string
+  accessUrls?: string[]
+  chatwoot?: {
+    host: string
+    websiteToken: string
+    /** 客服按钮文字（默认：在线客服） */
+    label?: string
+  }
+  group?: SiteGroup
+  contacts?: {
+    qq?: string
+    email?: string
+    teams?: string
+    telegram?: string
+  }
+  infoUrl?: {
+    /** 国内文档地址（必填） */
+    cn: string
+    /** 国外文档地址（必填） */
+    en: string
+    /** 国内文档（语雀）查看密码，若有则在界面上展示给用户 */
+    cnPassword?: string
+    /** 提示前缀文字（默认：{网站名}网站和群组信息：） */
+    label?: string
+    /** 国内查看链接文字（默认：国内查看） */
+    cnLabel?: string
+    /** 国外查看链接文字（默认：国外查看） */
+    enLabel?: string
+    /** 密码提示文字（默认：密码，展示为「（密码：xxx）」） */
+    passwordLabel?: string
+  }
 }

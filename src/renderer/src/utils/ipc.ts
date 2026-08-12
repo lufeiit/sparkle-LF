@@ -162,6 +162,14 @@ export async function getCurrentProfileItem(): Promise<ProfileItem> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getCurrentProfileItem'))
 }
 
+/** 获取当前 v2board 账户的用户信息（用于推送给客服系统识别用户） */
+export async function getV2BoardUserInfo(): Promise<{
+  loggedIn: boolean
+  userInfo?: Record<string, unknown>
+}> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getV2BoardUserInfo'))
+}
+
 export async function getProfileItem(id: string | undefined): Promise<ProfileItem> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getProfileItem', id))
 }

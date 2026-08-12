@@ -1,5 +1,6 @@
 import { getControledMihomoConfig } from './controledMihomo'
 import { mihomoProfileWorkDir, mihomoWorkDir, profileConfigPath, profilePath } from '../utils/dirs'
+import { v2boardGetSubscribe, v2boardLogin } from '../core/v2boardApi'
 import { addProfileUpdater, delProfileUpdater } from '../core/profileUpdater'
 import { readFile, writeFile, rm, mkdir } from 'fs/promises'
 import { fileToStr } from '@uruhalushia/sparkle-native'
@@ -75,6 +76,27 @@ export async function updateProfileItem(item: ProfileItem): Promise<void> {
     oldItem.ageRecipient !== item.ageRecipient || oldItem.ageIdentity !== item.ageIdentity
   let profileContent: string | undefined
 
+  // v2board 未登录状态：清除凭据后删除已下载的订阅配置和元数据
+  const isV2BoardLoggedOut =
+    item.type === 'v2board' && !item.v2board?.email && !item.v2board?.password
+  let removedProfileOnLogout = false
+  if (isV2BoardLoggedOut) {
+    const profileFilePath = profilePath(item.id)
+    if (existsSync(profileFilePath)) {
+      console.log(`[Profile] v2board 登出，删除订阅配置: ${profileFilePath}`)
+      await rm(profileFilePath)
+      removedProfileOnLogout = true
+    } else {
+      console.log(`[Profile] v2board 未登录，无配置文件可删: ${profileFilePath}`)
+    }
+    // 清除下载订阅时产生的元数据（流量/到期/订阅链接/更新间隔等）
+    item.url = undefined
+    item.extra = undefined
+    item.interval = 0
+    item.locked = false
+    item.home = undefined
+  }
+
   if (shouldRewriteProfile && existsSync(profilePath(item.id))) {
     const rawProfile = await readFile(profilePath(item.id), 'utf-8')
     try {
@@ -91,6 +113,9 @@ export async function updateProfileItem(item: ProfileItem): Promise<void> {
   if (profileContent !== undefined) {
     await writeProfileContent(item.id, profileContent, item, false)
   }
+  if (removedProfileOnLogout && config.current === item.id) {
+    await restartCore()
+  }
 }
 
 export async function addProfileItem(item: Partial<ProfileItem>): Promise<void> {
@@ -103,7 +128,8 @@ export async function addProfileItem(item: Partial<ProfileItem>): Promise<void> 
   }
   await setProfileConfig(config)
 
-  if (!config.current) {
+  // v2board 登录下载后默认选中
+  if (newItem.type === 'v2board' || !config.current) {
     await changeCurrentProfile(newItem.id)
   }
   await addProfileUpdater(newItem)
@@ -143,7 +169,13 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
   const id = item.id || new Date().getTime().toString(16)
   const newItem = {
     id,
-    name: item.name || (item.type === 'remote' ? 'Remote File' : 'Local File'),
+    name:
+      item.name ||
+      (item.type === 'v2board'
+        ? 'v2board 账户'
+        : item.type === 'remote'
+          ? 'Remote File'
+          : 'Local File'),
     type: item.type,
     url: item.url,
     fingerprint: item.fingerprint,
@@ -156,145 +188,31 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
     useProxy: item.useProxy || false,
     ageRecipient: item.ageRecipient?.trim() || undefined,
     ageIdentity: item.ageIdentity?.trim() || undefined,
+    v2board: item.v2board,
     updated: new Date().getTime()
   } as ProfileItem
   switch (newItem.type) {
     case 'remote': {
-      const { 'mixed-port': mixedPort = 7890 } = await getControledMihomoConfig()
       if (!item.url) throw new Error('Empty URL')
-      let res: AxiosResponse
-      if (newItem.substore) {
-        const urlObj = new URL(`http://127.0.0.1:${subStorePort}${item.url}`)
-        urlObj.searchParams.set('target', 'ClashMeta')
-        urlObj.searchParams.set('noCache', 'true')
-        if (newItem.useProxy && mixedPort != 0) {
-          urlObj.searchParams.set('proxy', `http://127.0.0.1:${mixedPort}`)
-        } else {
-          urlObj.searchParams.delete('proxy')
-        }
-        res = await axios.get(urlObj.toString(), {
-          headers: {
-            'User-Agent': await getUserAgent()
-          },
-          responseType: 'text'
-        })
-      } else {
-        try {
-          const httpsAgent = new https.Agent({ rejectUnauthorized: !item.fingerprint })
-
-          if (item.fingerprint) {
-            const expected = item.fingerprint.replace(/:/g, '').toUpperCase()
-            const verify = (s: tls.TLSSocket) => {
-              if (getCertFingerprint(s.getPeerCertificate()) !== expected)
-                s.destroy(new Error('证书指纹不匹配'))
-            }
-
-            if (newItem.useProxy && mixedPort != 0) {
-              const urlObj = new URL(item.url)
-              const hostname = urlObj.hostname
-              const port = urlObj.port || '443'
-              httpsAgent.createConnection = (_, cb) => {
-                const req = http.request({
-                  host: '127.0.0.1',
-                  port: mixedPort,
-                  method: 'CONNECT',
-                  path: `${hostname}:${port}`
-                })
-
-                req.on('connect', (res, sock, head) => {
-                  if (res.statusCode !== 200) {
-                    cb?.(new Error(`代理连接失败，状态码：${res.statusCode}`), null!)
-                    return
-                  }
-                  if (head.length > 0) sock.unshift(head)
-                  const tls$ = tls.connect(
-                    { socket: sock, servername: hostname, rejectUnauthorized: false },
-                    () => verify(tls$)
-                  )
-                  cb?.(null, tls$)
-                })
-
-                req.on('error', (e) => cb?.(e, null!))
-                req.end()
-                return null!
-              }
-            } else {
-              const conn = httpsAgent.createConnection.bind(httpsAgent)
-              httpsAgent.createConnection = (o, c) => {
-                const sock = conn(o, c)
-                sock?.once('secureConnect', function (this: tls.TLSSocket) {
-                  verify(this)
-                })
-                return sock
-              }
-            }
-          }
-
-          res = await axios.get(item.url, {
-            httpsAgent,
-            ...(newItem.useProxy &&
-              mixedPort &&
-              !item.fingerprint && {
-                proxy: { protocol: 'http', host: '127.0.0.1', port: mixedPort }
-              }),
-            headers: { 'User-Agent': newItem.ua || (await getUserAgent()) },
-            responseType: 'text'
-          })
-        } catch (error) {
-          if (axios.isAxiosError(error)) {
-            if (error.code === 'ECONNRESET' || error.code === 'ECONNABORTED') {
-              throw new Error(`网络连接被重置或超时：${item.url}`)
-            } else if (error.code === 'CERT_HAS_EXPIRED') {
-              throw new Error(`服务器证书已过期：${item.url}`)
-            } else if (error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
-              throw new Error(`无法验证服务器证书：${item.url}`)
-            } else if (error.message.includes('Certificate verification failed')) {
-              throw new Error(`证书验证失败：${item.url}`)
-            } else {
-              throw new Error(`请求失败：${error.message}`)
-            }
-          }
-          throw error
-        }
+      const res = await fetchRemoteProfile(newItem)
+      await saveFetchedProfile(newItem, res)
+      break
+    }
+    case 'v2board': {
+      const account = newItem.v2board
+      const sites = account?.sites?.length ? account.sites : account?.site ? [account.site] : []
+      if (sites.length === 0) {
+        throw new Error('v2board 站点地址不能为空')
       }
-
-      const data = await decryptProfileContent(String(res.data), newItem)
-      const headers = res.headers
-      const contentDispositionKey = Object.keys(headers).find((k) =>
-        k.toLowerCase().endsWith('content-disposition')
-      )
-      if (contentDispositionKey && newItem.name === 'Remote File') {
-        newItem.name = parseFilename(headers[contentDispositionKey])
+      if (!account?.email || !account?.password) {
+        throw new Error('v2board 账户尚未登录，请先登录账户')
       }
-      const homeKey = Object.keys(headers).find((k) =>
-        k.toLowerCase().endsWith('profile-web-page-url')
-      )
-      if (homeKey) {
-        newItem.home = headers[homeKey]
-      }
-      const intervalKey = Object.keys(headers).find((k) =>
-        k.toLowerCase().endsWith('profile-update-interval')
-      )
-      if (intervalKey) {
-        newItem.interval = parseInt(headers[intervalKey]) * 60
-        if (newItem.interval) {
-          newItem.locked = true
-        }
-      }
-      const userinfoKey = Object.keys(headers).find((k) =>
-        k.toLowerCase().endsWith('subscription-userinfo')
-      )
-      if (userinfoKey) {
-        newItem.extra = parseSubinfo(headers[userinfoKey])
-      }
-      if (newItem.verify) {
-        try {
-          parseYaml<MihomoConfig>(data)
-        } catch (error) {
-          throw new Error('订阅格式错误，无法解析为有效的配置文件\n' + (error as Error).message)
-        }
-      }
-      await setProfileStr(id, data, newItem)
+      const { authData, apiBase } = await v2boardLogin(account)
+      const subscribeUrl = await v2boardGetSubscribe(apiBase, authData)
+      // 每次更新都会获取新的订阅链接（token），规避阅后即焚
+      newItem.url = subscribeUrl
+      const res = await fetchRemoteProfile(newItem)
+      await saveFetchedProfile(newItem, res)
       break
     }
     case 'local': {
@@ -304,6 +222,146 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
     }
   }
   return newItem
+}
+
+async function fetchRemoteProfile(newItem: ProfileItem): Promise<AxiosResponse> {
+  const { 'mixed-port': mixedPort = 7890 } = await getControledMihomoConfig()
+  if (!newItem.url) throw new Error('Empty URL')
+  const url = newItem.url
+  if (newItem.substore) {
+    const urlObj = new URL(`http://127.0.0.1:${subStorePort}${url}`)
+    urlObj.searchParams.set('target', 'ClashMeta')
+    urlObj.searchParams.set('noCache', 'true')
+    if (newItem.useProxy && mixedPort != 0) {
+      urlObj.searchParams.set('proxy', `http://127.0.0.1:${mixedPort}`)
+    } else {
+      urlObj.searchParams.delete('proxy')
+    }
+    return await axios.get(urlObj.toString(), {
+      headers: {
+        'User-Agent': await getUserAgent()
+      },
+      responseType: 'text'
+    })
+  }
+  try {
+    const httpsAgent = new https.Agent({ rejectUnauthorized: !newItem.fingerprint })
+
+    if (newItem.fingerprint) {
+      const expected = newItem.fingerprint.replace(/:/g, '').toUpperCase()
+      const verify = (s: tls.TLSSocket) => {
+        if (getCertFingerprint(s.getPeerCertificate()) !== expected)
+          s.destroy(new Error('证书指纹不匹配'))
+      }
+
+      if (newItem.useProxy && mixedPort != 0) {
+        const urlObj = new URL(url)
+        const hostname = urlObj.hostname
+        const port = urlObj.port || '443'
+        httpsAgent.createConnection = (_, cb) => {
+          const req = http.request({
+            host: '127.0.0.1',
+            port: mixedPort,
+            method: 'CONNECT',
+            path: `${hostname}:${port}`
+          })
+
+          req.on('connect', (res, sock, head) => {
+            if (res.statusCode !== 200) {
+              cb?.(new Error(`代理连接失败，状态码：${res.statusCode}`), null!)
+              return
+            }
+            if (head.length > 0) sock.unshift(head)
+            const tls$ = tls.connect(
+              { socket: sock, servername: hostname, rejectUnauthorized: false },
+              () => verify(tls$)
+            )
+            cb?.(null, tls$)
+          })
+
+          req.on('error', (e) => cb?.(e, null!))
+          req.end()
+          return null!
+        }
+      } else {
+        const conn = httpsAgent.createConnection.bind(httpsAgent)
+        httpsAgent.createConnection = (o, c) => {
+          const sock = conn(o, c)
+          sock?.once('secureConnect', function (this: tls.TLSSocket) {
+            verify(this)
+          })
+          return sock
+        }
+      }
+    }
+
+    return await axios.get(url, {
+      httpsAgent,
+      ...(newItem.useProxy &&
+        mixedPort &&
+        !newItem.fingerprint && {
+          proxy: { protocol: 'http', host: '127.0.0.1', port: mixedPort }
+        }),
+      headers: { 'User-Agent': newItem.ua || (await getUserAgent()) },
+      responseType: 'text'
+    })
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNRESET' || error.code === 'ECONNABORTED') {
+        throw new Error(`网络连接被重置或超时：${url}`)
+      } else if (error.code === 'CERT_HAS_EXPIRED') {
+        throw new Error(`服务器证书已过期：${url}`)
+      } else if (error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
+        throw new Error(`无法验证服务器证书：${url}`)
+      } else if (error.message.includes('Certificate verification failed')) {
+        throw new Error(`证书验证失败：${url}`)
+      } else {
+        throw new Error(`请求失败：${error.message}`)
+      }
+    }
+    throw error
+  }
+}
+
+async function saveFetchedProfile(newItem: ProfileItem, res: AxiosResponse): Promise<void> {
+  const id = newItem.id
+  const data = await decryptProfileContent(String(res.data), newItem)
+  const headers = res.headers
+  const contentDispositionKey = Object.keys(headers).find((k) =>
+    k.toLowerCase().endsWith('content-disposition')
+  )
+  if (contentDispositionKey && newItem.name === 'Remote File') {
+    newItem.name = parseFilename(headers[contentDispositionKey])
+  }
+  const homeKey = Object.keys(headers).find((k) =>
+    k.toLowerCase().endsWith('profile-web-page-url')
+  )
+  if (homeKey) {
+    newItem.home = headers[homeKey]
+  }
+  const intervalKey = Object.keys(headers).find((k) =>
+    k.toLowerCase().endsWith('profile-update-interval')
+  )
+  if (intervalKey) {
+    newItem.interval = parseInt(headers[intervalKey]) * 60
+    if (newItem.interval) {
+      newItem.locked = true
+    }
+  }
+  const userinfoKey = Object.keys(headers).find((k) =>
+    k.toLowerCase().endsWith('subscription-userinfo')
+  )
+  if (userinfoKey) {
+    newItem.extra = parseSubinfo(headers[userinfoKey])
+  }
+  if (newItem.verify) {
+    try {
+      parseYaml<MihomoConfig>(data)
+    } catch (error) {
+      throw new Error('订阅格式错误，无法解析为有效的配置文件\n' + (error as Error).message)
+    }
+  }
+  await setProfileStr(id, data, newItem)
 }
 
 export async function getProfileStr(id: string | undefined): Promise<string> {

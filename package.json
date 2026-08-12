@@ -19,11 +19,12 @@
     "updater": "node scripts/updater.ts",
     "checksum": "node scripts/checksum.ts",
     "telegram": "node scripts/telegram.ts",
-    "dev": "pnpm run ensure:electron && electron-vite dev",
+    "generate:sites": "tsx scripts/generate-sites.ts",
+    "dev": "pnpm run generate:sites && pnpm run ensure:electron && electron-vite dev",
     "postinstall": "pnpm run ensure:electron && electron-builder install-app-deps",
-    "build:win": "electron-vite build && electron-builder --publish never --win",
-    "build:mac": "electron-vite build && electron-builder --publish never --mac",
-    "build:linux": "electron-vite build && electron-builder --publish never --linux"
+    "build:win": "pnpm run generate:sites && electron-vite build && electron-builder --publish never --win",
+    "build:mac": "pnpm run generate:sites && electron-vite build && electron-builder --publish never --mac",
+    "build:linux": "pnpm run generate:sites && electron-vite build && electron-builder --publish never --linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -68,6 +69,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/ws": "^8.18.1",
+    "@uruhalushia/sparkle-native-darwin-arm64": "0.1.1",
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.5.2",
     "cron-validator": "^1.4.0",
@@ -105,6 +107,21 @@
     "typescript": "^6.0.3",
     "vite": "^8.1.4",
     "vite-plugin-monaco-editor": "1.1.0"
+  },
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": [
+        "current",
+        "darwin",
+        "win32",
+        "linux"
+      ],
+      "cpu": [
+        "current",
+        "x64",
+        "arm64"
+      ]
+    }
   },
   "packageManager": "pnpm@11.1.1"
 }

@@ -1,4 +1,5 @@
 import { app, ipcMain } from 'electron'
+import { v2boardGetUserInfo, v2boardLogin } from '../core/v2boardApi'
 import {
   mihomoChangeProxy,
   mihomoCloseConnections,
@@ -417,5 +418,15 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('notDialogQuit', () => {
     setNotQuitDialog()
     app.quit()
+  })
+  // 获取当前 v2board 账户的用户信息（用于推送给客服系统识别用户）
+  ipcMain.handle('getV2BoardUserInfo', async () => {
+    const item = await getCurrentProfileItem()
+    if (item.type !== 'v2board' || !item.v2board?.email || !item.v2board?.password) {
+      return { loggedIn: false }
+    }
+    const { authData, apiBase } = await v2boardLogin(item.v2board)
+    const userInfo = await v2boardGetUserInfo(apiBase, authData)
+    return { loggedIn: true, userInfo }
   })
 }

@@ -1,13 +1,11 @@
 import {
   Button,
-  Checkbox,
   Chip,
   Divider,
   Dropdown,
   DropdownItem,
   DropdownMenu,
-  DropdownTrigger,
-  Input
+  DropdownTrigger
 } from '@heroui/react'
 import BasePage from '@renderer/components/base/base-page'
 import ProfileItem from '@renderer/components/profiles/profile-item'
@@ -15,9 +13,7 @@ import EditInfoModal from '@renderer/components/profiles/edit-info-modal'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { getFilePath, readTextFile, subStoreCollections, subStoreSubs } from '@renderer/utils/ipc'
-import type { KeyboardEvent } from 'react'
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { MdContentPaste } from 'react-icons/md'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext } from '@dnd-kit/sortable'
 import { FaPlus } from 'react-icons/fa6'
@@ -25,6 +21,8 @@ import { IoMdRefresh } from 'react-icons/io'
 import { MdTune } from 'react-icons/md'
 import SubStoreIcon from '@renderer/components/base/substore-icon'
 import ProfileSettingDrawer from '@renderer/components/profiles/profile-setting-drawer'
+import V2BoardImportModal from '@renderer/components/profiles/v2board-import-modal'
+import sites from '@renderer/assets/sites.json'
 import useSWR from 'swr'
 import { useNavigate } from 'react-router-dom'
 import { useCardDndSensors } from '@renderer/hooks/use-card-dnd-sensors'
@@ -43,23 +41,26 @@ const Profiles: React.FC = () => {
     mutateProfileConfig
   } = useProfileConfig()
   const { appConfig } = useAppConfig()
-  const { useSubStore = true, useCustomSubStore = false, customSubStoreUrl = '' } = appConfig || {}
+  const { useSubStore = false, useCustomSubStore = false, customSubStoreUrl = '' } = appConfig || {}
+  const siteList = (sites as SiteConfig[]).filter((s) => s.name?.zh || s.name?.en)
+  const loginBtnName = siteList.length ? `登录${siteList[0].name.zh || siteList[0].name.en}` : '登录网站名'
   const { current, items } = profileConfig || {}
   const itemsArray = items ?? emptyItems
+  const loggedInV2Board = itemsArray.find(
+    (i) => i.type === 'v2board' && i.v2board?.email && i.v2board?.password
+  )
   const navigate = useNavigate()
   const [sortedItems, setSortedItems] = useState(itemsArray)
-  const [useProxy, setUseProxy] = useState(false)
+  const [useProxy] = useState(false)
   const [subStoreImporting, setSubStoreImporting] = useState(false)
-  const [importing, setImporting] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [fileOver, setFileOver] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showV2BoardModal, setShowV2BoardModal] = useState(false)
   const [isSettingDrawerOpen, setIsSettingDrawerOpen] = useState(false)
   const [settingDrawerReopenSignal, setSettingDrawerReopenSignal] = useState(0)
   const [editingItem, setEditingItem] = useState<ProfileItem | null>(null)
-  const [url, setUrl] = useState('')
-  const isUrlEmpty = url.trim() === ''
   const sensors = useCardDndSensors()
   const { data: subs = [], mutate: mutateSubs } = useSWR(
     useSubStore ? 'subStoreSubs' : undefined,
@@ -127,15 +128,16 @@ const Profiles: React.FC = () => {
     }
     return items
   }, [subs, collections])
-  const handleImport = async (importUrl: string): Promise<void> => {
-    if (importing) return
-    setImporting(true)
-    try {
-      await addProfileItem({ name: '', type: 'remote', url: importUrl, useProxy, autoUpdate: true })
-      setUrl('')
-    } finally {
-      setImporting(false)
-    }
+  const handleImport = (): void => {
+    setEditingItem({
+      id: '',
+      name: '',
+      type: 'remote',
+      url: '',
+      useProxy: false,
+      autoUpdate: true
+    })
+    setShowEditModal(true)
   }
   const pageRef = useRef<HTMLDivElement>(null)
 
@@ -154,11 +156,6 @@ const Profiles: React.FC = () => {
         await setProfileConfig({ current, items: newOrder })
       }
     }
-  }
-
-  const handleInputKeyUp = (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key !== 'Enter' || isUrlEmpty || importing) return
-    handleImport(e.currentTarget.value)
   }
 
   useEffect(() => {
@@ -257,11 +254,11 @@ const Profiles: React.FC = () => {
               setUpdating(true)
               for (const item of itemsArray) {
                 if (item.id === current) continue
-                if (item.type !== 'remote') continue
+                if (item.type !== 'remote' && item.type !== 'v2board') continue
                 await addProfileItem(item)
               }
               const currentItem = itemsArray.find((item) => item.id === current)
-              if (currentItem && currentItem.type === 'remote') {
+              if (currentItem && (currentItem.type === 'remote' || currentItem.type === 'v2board')) {
                 await addProfileItem(currentItem)
               }
               setUpdating(false)
@@ -305,48 +302,31 @@ const Profiles: React.FC = () => {
           }}
         />
       )}
+      {showV2BoardModal && (
+        <V2BoardImportModal
+          addProfileItem={addProfileItem}
+          updateProfileItem={updateProfileItem}
+          removeProfileItem={removeProfileItem}
+          item={loggedInV2Board}
+          onClose={() => setShowV2BoardModal(false)}
+        />
+      )}
       <div className="sticky profiles-sticky top-0 z-40">
-        <div className="flex p-2">
-          <Input
+        <div className="flex items-center justify-center gap-2 p-2">
+          <Button
             size="sm"
-            value={url}
-            onValueChange={setUrl}
-            onKeyUp={handleInputKeyUp}
-            endContent={
-              <>
-                <Button
-                  size="sm"
-                  isIconOnly
-                  variant="light"
-                  className="z-10"
-                  onPress={() => {
-                    navigator.clipboard.readText().then((text) => {
-                      setUrl(text)
-                    })
-                  }}
-                >
-                  <MdContentPaste className="text-lg" />
-                </Button>
-                <Checkbox
-                  className="whitespace-nowrap"
-                  checked={useProxy}
-                  onValueChange={setUseProxy}
-                >
-                  代理
-                </Checkbox>
-              </>
-            }
-          />
-
+            variant="flat"
+            color="primary"
+            onPress={() => setShowV2BoardModal(true)}
+          >
+            {loginBtnName}
+          </Button>
           <Button
             size="sm"
             color="primary"
-            className="ml-2"
-            isDisabled={isUrlEmpty}
-            isLoading={importing}
-            onPress={() => handleImport(url)}
+            onPress={handleImport}
           >
-            导入
+            导入订阅连接
           </Button>
           {useSubStore && (
             <Dropdown
@@ -358,7 +338,7 @@ const Profiles: React.FC = () => {
               <DropdownTrigger>
                 <Button
                   isLoading={subStoreImporting}
-                  className="ml-2 substore-import"
+                  className="substore-import"
                   size="sm"
                   isIconOnly
                   color="primary"
@@ -425,7 +405,7 @@ const Profiles: React.FC = () => {
           )}
           <Dropdown>
             <DropdownTrigger>
-              <Button className="ml-2 new-profile" size="sm" isIconOnly color="primary">
+              <Button className="new-profile" size="sm" isIconOnly color="primary">
                 <FaPlus />
               </Button>
             </DropdownTrigger>
@@ -479,6 +459,41 @@ const Profiles: React.FC = () => {
         </div>
         <Divider />
       </div>
+      {siteList.map(
+        (site) =>
+          site.infoUrl && (
+            <div
+              key={site.id}
+              className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm text-foreground/70"
+            >
+              <span>
+                {site.infoUrl.label || `${site.name.zh}网站和群组信息：`}
+              </span>
+              <a
+                href={site.infoUrl.cn}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline decoration-dotted hover:opacity-80"
+              >
+                {site.infoUrl.cnLabel || '国内查看'}
+              </a>
+              {site.infoUrl.cnPassword && (
+                <span className="text-warning">
+                  （{site.infoUrl.passwordLabel || '密码'}：{site.infoUrl.cnPassword}）
+                </span>
+              )}
+              <span className="text-foreground/30">·</span>
+              <a
+                href={site.infoUrl.en}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline decoration-dotted hover:opacity-80"
+              >
+                {site.infoUrl.enLabel || '国外查看'}
+              </a>
+            </div>
+          )
+      )}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <div
           className={`${fileOver ? 'blur-sm' : ''} grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 m-2`}

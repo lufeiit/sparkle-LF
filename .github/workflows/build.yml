@@ -38,6 +38,16 @@ jobs:
             arch: arm64
             format: nsis
 
+          # Win7 兼容构建（Electron 22，legacy CJS）
+          - os: windows-latest
+            arch: x64
+            format: nsis
+            legacy: win7
+          - os: windows-latest
+            arch: x64
+            format: 7z
+            legacy: win7
+
           - os: ubuntu-latest
             arch: x64
             format: deb
@@ -71,7 +81,15 @@ jobs:
           - os: macos-latest
             arch: arm64
 
-    name: Build ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}
+          # macOS 10.15 (Catalina) 兼容构建（Electron 32）
+          - os: macos-latest
+            arch: x64
+            legacy: catalina
+          - os: macos-latest
+            arch: arm64
+            legacy: catalina
+
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
 
     steps:
       - name: Checkout
@@ -151,6 +169,7 @@ jobs:
         env:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
+          LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
         run: |
           case "${{ matrix.os }}-${{ matrix.arch }}" in
@@ -164,6 +183,15 @@ jobs:
             *) echo "Unsupported native target: ${{ matrix.os }}-${{ matrix.arch }}" && exit 1 ;;
           esac
           SKIP_PREPARE=1 pnpm install $PNPM_TARGET_FLAGS
+
+          # Legacy 构建：在依赖安装完成后降级 Electron（避免被 lockfile 恢复）
+          if [[ "${{ matrix.legacy }}" == "win7" ]]; then
+            SKIP_PREPARE=1 pnpm add -D electron@22.3.27 --ignore-scripts $PNPM_TARGET_FLAGS
+            sed -i "s/artifactName: \${name}-windows/artifactName: \${name}-win7-windows/" electron-builder.yml
+          elif [[ "${{ matrix.legacy }}" == "catalina" ]]; then
+            SKIP_PREPARE=1 pnpm add -D electron@32.2.2 --ignore-scripts $PNPM_TARGET_FLAGS
+            sed -i "s/artifactName: \${name}-macos/artifactName: \${name}-catalina-macos/" electron-builder.yml
+          fi
 
           verify_native_package() {
             node -e "require('node:module').createRequire(require.resolve(process.argv[1])).resolve(process.argv[2].trim() + '/package.json')" "$1" "$2"
@@ -191,6 +219,7 @@ jobs:
         env:
           npm_config_arch: ${{ matrix.arch }}
           npm_config_target_arch: ${{ matrix.arch }}
+          LEGACY_BUILD: ${{ matrix.legacy == 'win7' && 'true' || '' }}
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
@@ -223,6 +252,7 @@ jobs:
           git log -1 --pretty=format:"%s%n%b" > changelog.md
 
       - name: Generate latest.yml
+        if: matrix.legacy == ''
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         shell: bash
@@ -231,7 +261,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}
+          name: ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}${{ matrix.legacy && '-' || '' }}${{ matrix.legacy || '' }}
           path: |
             dist/sparkle*
             !dist/sparkle.app.plist
