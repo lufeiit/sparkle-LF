@@ -181,9 +181,10 @@ jobs:
 
           # 分网站专属包：所有 artifactName 加网站前缀（sparkle-{site}-...），
           # 在 legacy 后缀替换之后执行，避免相互影响
+          # 注意：join 必须用字符串拼接（不能模板字符串），否则 ${name} 会被 JS 求值
           SITE_ID="${{ matrix.site }}"
           if [[ -n "$SITE_ID" ]]; then
-            node -e 'const fs=require("fs");const p="electron-builder.yml";const s=process.argv[1];fs.writeFileSync(p,fs.readFileSync(p,"utf8").split("artifactName: ${name}-").join(`artifactName: ${name}-${s}-`))' "$SITE_ID"
+            node -e 'const fs=require("fs");const p="electron-builder.yml";const s=process.argv[1];fs.writeFileSync(p,fs.readFileSync(p,"utf8").split("artifactName: ${name}-").join("artifactName: ${name}-" + s + "-"))' "$SITE_ID"
           fi
 
           verify_native_package() {
