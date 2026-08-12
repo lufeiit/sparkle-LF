@@ -321,6 +321,21 @@ async function resolveResource(binInfo: ResourceInfo) {
     console.log(`[INFO]: ${file} 已存在且版本一致，跳过下载`)
     return
   }
+
+  // 优先从仓库内置内核复制（平台特定文件：7za/runner/enableLoopback 等），避免 CI 从 GitHub 下载（限流）
+  const kernelsFile = path.join(cwd, 'extra', 'kernels', `${platform}-${arch}`, file)
+  if (fs.existsSync(kernelsFile)) {
+    fs.mkdirSync(resDir, { recursive: true })
+    fs.copyFileSync(kernelsFile, targetPath)
+    if (needExecutable && platform !== 'win32') {
+      execSync(`chmod 755 ${targetPath}`)
+    }
+    versions[file] = downloadURL
+    fs.writeFileSync(versionFile, JSON.stringify(versions, null, 2))
+    console.log(`[INFO]: ${file} 使用仓库内置内核文件`)
+    return
+  }
+
   if (fs.existsSync(targetPath)) {
     fs.rmSync(targetPath)
   }
@@ -445,10 +460,17 @@ const resolveMonitor = async () => {
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true })
   }
-  await downloadFile(
-    `https://github.com/xishang0128/sparkle-run/releases/download/monitor/${arch}.zip`,
-    tempZip
-  )
+  // 优先使用仓库内置 monitor.zip（避免 CI 从 GitHub 下载限流）
+  const kernelsZip = path.join(cwd, 'extra', 'kernels', `${platform}-${arch}`, 'monitor.zip')
+  if (fs.existsSync(kernelsZip)) {
+    fs.copyFileSync(kernelsZip, tempZip)
+    console.log(`[INFO]: TrafficMonitor 使用仓库内置 monitor.zip`)
+  } else {
+    await downloadFile(
+      `https://github.com/xishang0128/sparkle-run/releases/download/monitor/${arch}.zip`,
+      tempZip
+    )
+  }
   const zip = new AdmZip(tempZip)
   const resDir = path.join(cwd, 'extra', 'files')
   const targetPath = path.join(resDir, 'TrafficMonitor')
