@@ -39,7 +39,8 @@ nsis:
   include: build/installer.nsh
 mac:
   target:
-    - pkg
+    - dmg
+    - zip
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -48,12 +49,6 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
   artifactName: ${name}-macos-${version}-${arch}.${ext}
-pkg:
-  allowAnywhere: false
-  allowCurrentUserHome: false
-  # background:
-  #   alignment: bottomleft
-  #   file: build/background.png
 linux:
   desktop:
     entry:

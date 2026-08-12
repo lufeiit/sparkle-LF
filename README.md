@@ -187,7 +187,7 @@ pnpm build:linux deb --x64
 #### 构建产物
 
 - **Windows**: `.exe` 安装包和 `.7z` 便携版
-- **macOS**: `.pkg` 安装包
+- **macOS**: `.dmg` 安装包和 `.zip`（自动更新用）
 - **Linux**: `.deb`、`.rpm`、`.pkg.tar.zst(pacman)` 等格式
 
 ### 常见问题

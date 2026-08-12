@@ -3,7 +3,7 @@ import { parseYaml } from '../utils/yaml'
 import { app, shell } from 'electron'
 import { getAppConfig, getControledMihomoConfig } from '../config'
 import { dataDir, exeDir, exePath, isPortable, resourcesFilesDir } from '../utils/dirs'
-import { copyFile, rm, writeFile, readFile, statfs } from 'fs/promises'
+import { copyFile, mkdir, readdir, rm, writeFile, readFile, statfs } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
 import { exec, spawn } from 'child_process'
@@ -22,8 +22,8 @@ import { appendAppLog } from '../utils/log'
 let downloadCancelToken: CancelTokenSource | null = null
 const WINDOWS_INSTALLER_MIN_TEMP_SPACE_BYTES = 1024 * 1024 * 1024
 const UPDATE_MANIFEST_URLS: Record<AppUpdateChannel, string> = {
-  stable: 'https://github.com/xishang0128/sparkle/releases/latest/download/latest.yml',
-  rolling: 'https://github.com/xishang0128/sparkle/releases/download/rolling/latest.yml'
+  stable: 'https://github.com/lufeiit/sparkle-LF/releases/latest/download/latest.yml',
+  rolling: 'https://github.com/lufeiit/sparkle-LF/releases/download/rolling/latest.yml'
 }
 
 function getGitHubAuthHeaders(token?: string): Record<string, string> {
@@ -117,12 +117,12 @@ export async function downloadAndInstallUpdate(version: string, tag?: string): P
   const { 'mixed-port': mixedPort = 7890 } = await getControledMihomoConfig()
   const { githubToken } = await getAppConfig()
   const releaseTag = resolveReleaseTag(version, tag)
-  const baseUrl = `https://github.com/xishang0128/sparkle/releases/download/${releaseTag}/`
+  const baseUrl = `https://github.com/lufeiit/sparkle-LF/releases/download/${releaseTag}/`
   const fileMap: Record<string, string> = {
     'win32-x64': `sparkle-windows-${version}-x64-setup.exe`,
     'win32-arm64': `sparkle-windows-${version}-arm64-setup.exe`,
-    'darwin-x64': `sparkle-macos-${version}-x64.pkg`,
-    'darwin-arm64': `sparkle-macos-${version}-arm64.pkg`
+    'darwin-x64': `sparkle-macos-${version}-x64.zip`,
+    'darwin-arm64': `sparkle-macos-${version}-arm64.zip`
   }
   let file = fileMap[`${process.platform}-${process.arch}`]
   if (isPortable()) {
@@ -133,7 +133,7 @@ export async function downloadAndInstallUpdate(version: string, tag?: string): P
   }
   downloadCancelToken = axios.CancelToken.source()
 
-  const apiUrl = `https://api.github.com/repos/xishang0128/sparkle/releases/tags/${releaseTag}`
+  const apiUrl = `https://api.github.com/repos/lufeiit/sparkle-LF/releases/tags/${releaseTag}`
   const apiRequestConfig: AxiosRequestConfig = {
     headers: {
       Accept: 'application/vnd.github.v3+json',
@@ -239,13 +239,25 @@ export async function downloadAndInstallUpdate(version: string, tag?: string): P
       setNotQuitDialog()
       app.quit()
     }
-    if (file.endsWith('.pkg')) {
+    if (file.endsWith('.zip')) {
       try {
         await pauseSysProxy()
         await pauseServiceFallbackForAppUpdate()
         const execPromise = promisify(exec)
-        const shell = `installer -pkg ${path.join(dataDir(), file).replace(' ', '\\\\ ')} -target /`
-        const command = `do shell script "${shell}" with administrator privileges`
+        const zipPath = path.join(dataDir(), file)
+        const extractDir = path.join(dataDir(), 'sparkle-update')
+        await rm(extractDir, { recursive: true, force: true })
+        await mkdir(extractDir, { recursive: true })
+        await execPromise(`ditto -x -k "${zipPath}" "${extractDir}"`)
+        const entries = await readdir(extractDir)
+        const appEntry = entries.find((entry) => entry.endsWith('.app'))
+        if (!appEntry) {
+          throw new Error('更新包中未找到 .app 应用')
+        }
+        // 当前运行中的 App bundle 路径（/path/to/Sparkle.app）
+        const currentAppPath = path.dirname(path.dirname(app.getPath('exe')))
+        const installCmd = `rm -rf "${currentAppPath}" && ditto "${path.join(extractDir, appEntry)}" "${currentAppPath}"`
+        const command = `do shell script "${installCmd}" with administrator privileges`
         await execPromise(`osascript -e '${command}'`)
         appUpdateInstalling = true
         app.relaunch()
