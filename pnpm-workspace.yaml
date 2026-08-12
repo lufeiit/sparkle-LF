@@ -4,6 +4,16 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   meta-json-schema: true
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+    - win32
+    - linux
+  cpu:
+    - current
+    - x64
+    - arm64
 overrides:
   typescript-eslint: ^8.59.2
 patchedDependencies:

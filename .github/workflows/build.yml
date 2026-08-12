@@ -185,12 +185,17 @@ jobs:
           SKIP_PREPARE=1 pnpm install $PNPM_TARGET_FLAGS
 
           # Legacy 构建：在依赖安装完成后降级 Electron（避免被 lockfile 恢复）
+          # 注意：macOS 的 BSD sed 与 GNU sed 语法不兼容，统一用 Node 做替换（跨平台）
           if [[ "${{ matrix.legacy }}" == "win7" ]]; then
             SKIP_PREPARE=1 pnpm add -D electron@22.3.27 --ignore-scripts $PNPM_TARGET_FLAGS
-            sed -i "s/artifactName: \${name}-windows/artifactName: \${name}-win7-windows/" electron-builder.yml
+            node -e 'const fs=require("fs");const p="electron-builder.yml";fs.writeFileSync(p,fs.readFileSync(p,"utf8").split("artifactName: ${name}-windows").join("artifactName: ${name}-win7-windows"))'
+            # 重新下载 Electron 22 二进制（--ignore-scripts 跳过了 postinstall）
+            SKIP_PREPARE=1 pnpm run ensure:electron
           elif [[ "${{ matrix.legacy }}" == "catalina" ]]; then
             SKIP_PREPARE=1 pnpm add -D electron@32.2.2 --ignore-scripts $PNPM_TARGET_FLAGS
-            sed -i "s/artifactName: \${name}-macos/artifactName: \${name}-catalina-macos/" electron-builder.yml
+            node -e 'const fs=require("fs");const p="electron-builder.yml";fs.writeFileSync(p,fs.readFileSync(p,"utf8").replace("artifactName: ${name}-macos","artifactName: ${name}-catalina-macos"))'
+            # 重新下载 Electron 32 二进制（--ignore-scripts 跳过了 postinstall）
+            SKIP_PREPARE=1 pnpm run ensure:electron
           fi
 
           verify_native_package() {
