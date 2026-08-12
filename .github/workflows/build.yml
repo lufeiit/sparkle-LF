@@ -46,9 +46,6 @@ jobs:
           - { site: lufei, os: ubuntu-latest, arch: arm64, format: deb }
           - { site: lufei, os: ubuntu-latest, arch: arm64, format: rpm }
           - { site: lufei, os: ubuntu-latest, arch: arm64, format: pacman }
-          - { site: lufei, os: ubuntu-latest, arch: loong64, format: deb }
-          - { site: lufei, os: ubuntu-latest, arch: loong64, format: rpm }
-          - { site: lufei, os: ubuntu-latest, arch: loong64, format: pacman }
           - { site: lufei, os: macos-latest, arch: x64 }
           - { site: lufei, os: macos-latest, arch: arm64 }
           - { site: lufei, os: macos-latest, arch: x64, legacy: catalina }
@@ -66,9 +63,6 @@ jobs:
           - { site: mitu, os: ubuntu-latest, arch: arm64, format: deb }
           - { site: mitu, os: ubuntu-latest, arch: arm64, format: rpm }
           - { site: mitu, os: ubuntu-latest, arch: arm64, format: pacman }
-          - { site: mitu, os: ubuntu-latest, arch: loong64, format: deb }
-          - { site: mitu, os: ubuntu-latest, arch: loong64, format: rpm }
-          - { site: mitu, os: ubuntu-latest, arch: loong64, format: pacman }
           - { site: mitu, os: macos-latest, arch: x64 }
           - { site: mitu, os: macos-latest, arch: arm64 }
           - { site: mitu, os: macos-latest, arch: x64, legacy: catalina }
