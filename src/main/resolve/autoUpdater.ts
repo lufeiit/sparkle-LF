@@ -123,8 +123,8 @@ export async function downloadAndInstallUpdate(version: string, tag?: string): P
   const fileMap: Record<string, string> = {
     'win32-x64': `${sitePrefix}windows-${version}-x64-setup.exe`,
     'win32-arm64': `${sitePrefix}windows-${version}-arm64-setup.exe`,
-    'darwin-x64': `${sitePrefix}macos-${version}-x64.zip`,
-    'darwin-arm64': `${sitePrefix}macos-${version}-arm64.zip`
+    'darwin-x64': `${sitePrefix}macos-${version}-x64.dmg`,
+    'darwin-arm64': `${sitePrefix}macos-${version}-arm64.dmg`
   }
   let file = fileMap[`${process.platform}-${process.arch}`]
   if (isPortable()) {
@@ -241,26 +241,30 @@ export async function downloadAndInstallUpdate(version: string, tag?: string): P
       setNotQuitDialog()
       app.quit()
     }
-    if (file.endsWith('.zip')) {
+    if (file.endsWith('.dmg')) {
       try {
         await pauseSysProxy()
         await pauseServiceFallbackForAppUpdate()
         const execPromise = promisify(exec)
-        const zipPath = path.join(dataDir(), file)
-        const extractDir = path.join(dataDir(), 'sparkle-update')
-        await rm(extractDir, { recursive: true, force: true })
-        await mkdir(extractDir, { recursive: true })
-        await execPromise(`ditto -x -k "${zipPath}" "${extractDir}"`)
-        const entries = await readdir(extractDir)
-        const appEntry = entries.find((entry) => entry.endsWith('.app'))
-        if (!appEntry) {
-          throw new Error('更新包中未找到 .app 应用')
+        const dmgPath = path.join(dataDir(), file)
+        const mountPoint = path.join(dataDir(), 'sparkle-dmg-mount')
+        await rm(mountPoint, { recursive: true, force: true })
+        await mkdir(mountPoint, { recursive: true })
+        await execPromise(`hdiutil attach "${dmgPath}" -nobrowse -mountpoint "${mountPoint}"`)
+        try {
+          const entries = await readdir(mountPoint)
+          const appEntry = entries.find((entry) => entry.endsWith('.app'))
+          if (!appEntry) {
+            throw new Error('更新包中未找到 .app 应用')
+          }
+          // 当前运行中的 App bundle 路径（/path/to/Sparkle.app）
+          const currentAppPath = path.dirname(path.dirname(app.getPath('exe')))
+          const installCmd = `rm -rf "${currentAppPath}" && ditto "${path.join(mountPoint, appEntry)}" "${currentAppPath}"`
+          const command = `do shell script "${installCmd}" with administrator privileges`
+          await execPromise(`osascript -e '${command}'`)
+        } finally {
+          await execPromise(`hdiutil detach "${mountPoint}" -force`).catch(() => {})
         }
-        // 当前运行中的 App bundle 路径（/path/to/Sparkle.app）
-        const currentAppPath = path.dirname(path.dirname(app.getPath('exe')))
-        const installCmd = `rm -rf "${currentAppPath}" && ditto "${path.join(extractDir, appEntry)}" "${currentAppPath}"`
-        const command = `do shell script "${installCmd}" with administrator privileges`
-        await execPromise(`osascript -e '${command}'`)
         appUpdateInstalling = true
         app.relaunch()
         setNotQuitDialog()
