@@ -11,7 +11,14 @@ const { execSync } = require('child_process')
 const path = require('path')
 
 exports.default = async function afterSign(context) {
-  const { appOutDir, packager } = context
+  const { appOutDir, packager, electronPlatformName } = context
+
+  // 仅 macOS 需要签名；Windows/Linux 没有 codesign 命令
+  if (electronPlatformName !== 'darwin') {
+    console.log(`[afterSign] 跳过（非 macOS: ${electronPlatformName}）`)
+    return
+  }
+
   const appName = packager.appInfo.productFilename
   const appPath = path.join(appOutDir, `${appName}.app`)
 
