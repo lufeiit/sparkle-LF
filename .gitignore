@@ -1,7 +1,7 @@
 node_modules
 resources/files
 resources/sidecar
-extra
+extra/sidecar
 dist
 out
 latest.yml

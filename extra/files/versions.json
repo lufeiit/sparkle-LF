@@ -1,0 +1,10 @@
+{
+  "country.mmdb": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country-lite.mmdb",
+  "geoip.metadb": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
+  "geosite.dat": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat",
+  "geoip.dat": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat",
+  "ASN.mmdb": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb",
+  "BundleMRS.7z": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/BundleMRS.7z",
+  "sub-store.bundle.js": "https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store.bundle.js",
+  "sub-store-frontend": "https://github.com/sub-store-org/Sub-Store-Front-End/releases/latest/download/dist.zip"
+}

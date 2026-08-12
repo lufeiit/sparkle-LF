@@ -444,6 +444,24 @@ const resolveSubstore = () =>
       'https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store.bundle.js'
   })
 const resolveSubstoreFrontend = async () => {
+  const resDir = path.join(cwd, 'extra', 'files')
+  const targetPath = path.join(resDir, 'sub-store-frontend')
+  // 版本标记：已提交到仓库的文件（配合 extra/files/versions.json）直接跳过
+  const versionFile = path.join(resDir, 'versions.json')
+  let versions: Record<string, string> = {}
+  if (fs.existsSync(versionFile)) {
+    try {
+      versions = JSON.parse(fs.readFileSync(versionFile, 'utf-8'))
+    } catch {
+      versions = {}
+    }
+  }
+  const frontendURL =
+    'https://github.com/sub-store-org/Sub-Store-Front-End/releases/latest/download/dist.zip'
+  if (fs.existsSync(targetPath) && versions['sub-store-frontend'] === frontendURL) {
+    console.log('[INFO]: sub-store-frontend 已存在且版本一致，跳过下载')
+    return
+  }
   const tempDir = path.join(TEMP_DIR, 'substore-frontend')
   const tempZip = path.join(tempDir, 'dist.zip')
   if (!fs.existsSync(tempDir)) {
@@ -454,8 +472,6 @@ const resolveSubstoreFrontend = async () => {
     tempZip
   )
   const zip = new AdmZip(tempZip)
-  const resDir = path.join(cwd, 'extra', 'files')
-  const targetPath = path.join(resDir, 'sub-store-frontend')
   if (fs.existsSync(targetPath)) {
     fs.rmSync(targetPath, { recursive: true })
   }
