@@ -294,7 +294,8 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         shell: bash
-        run: SKIP_CHANGELOG=1 pnpm updater
+        # 不跳过 changelog：updater.ts 会按网站分组追加完整下载地址（每个 job 生成内容相同，publish 合并覆盖无害）
+        run: pnpm updater
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
