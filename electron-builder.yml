@@ -13,6 +13,7 @@ files:
   - '!images/*'
   - '!scripts/*'
   - '!extra/*'
+  - '!.electron-cache/*'
   - '!tailwind.config.js'
   - '!postcss.config.js'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
