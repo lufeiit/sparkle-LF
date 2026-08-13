@@ -1,7 +1,9 @@
 appId: sparkle.app
 productName: Sparkle
-# ad-hoc 签名（无 Apple 证书时统一签名，解决 arm64 different Team IDs 崩溃）
+# afterSign 顶层 hook：mac 统一 ad-hoc 签名（解决 arm64 different Team IDs 崩溃）
 afterSign: scripts/afterSign.cjs
+# asar 最大压缩，减小安装包体积
+compression: maximum
 directories:
   buildResources: build
 files:
