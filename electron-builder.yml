@@ -18,8 +18,12 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 extraResources:
-  - from: './extra/'
-    to: ''
+  # 只打包运行时需要的（当前平台内核 + 规则文件）；
+  # extra/kernels 是所有平台内核的构建源（298MB），不能打进每个包
+  - from: './extra/sidecar/'
+    to: 'sidecar/'
+  - from: './extra/files/'
+    to: 'files/'
 protocols:
   name: 'Sparkle URI Scheme'
   schemes:
